@@ -918,6 +918,13 @@ BM={
         return globalThis._onChunkLoaded(a0,a1,a2)
       }
     }
+    this.h=-1;
+    globalThis._tick=function(){
+      BM.tick()
+    };
+    globalThis.tick=function(){
+      globalThis._tick()
+    };
     this.S=!0
   }
 };
@@ -989,11 +996,4 @@ try{
   BM.E=[e.name,e.message]
 }
 BM.h=0;
-globalThis._tick=function(){
-  BM.tick()
-};
-globalThis.tick=function(){
-  globalThis._tick()
-};
 void 0;
-

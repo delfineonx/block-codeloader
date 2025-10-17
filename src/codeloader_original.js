@@ -1069,6 +1069,13 @@ const BootManager = {
         return globalThis._onChunkLoaded(arg0, arg1, arg2);
       };
     }
+    this.phase = -1;
+    globalThis._tick = function () {
+      BootManager.tick();
+    };
+    globalThis.tick = function () {
+      globalThis._tick();
+    };
     this.isPrimarySetupDone = true;
   },
 };
@@ -1155,13 +1162,6 @@ try {
 } catch (e) {
   BootManager.primarySetupError = [e.name, e.message];
 }
-
 BootManager.phase = 0;
-globalThis._tick = function () {
-  BootManager.tick();
-};
-globalThis.tick = function () {
-  globalThis._tick();
-};
 
 void 0;
