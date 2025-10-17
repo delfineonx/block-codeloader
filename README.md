@@ -32,7 +32,7 @@ Copy the loader source code entirely into your <code>World Code</code>.<br/>
 
 * [`Minified version`](https://github.com/delfineonx/block-codeloader/blob/main/src/codeloader_minified.js)
 
-<h6>It self‑boots on the lobby creation by temporarily swapping `_tick` to a boot dispatcher.</h6>
+<h6>It self‑boots on the lobby creation/start by temporarily swapping `_tick` to a boot dispatcher.</h6>
 
 ---
 
@@ -290,7 +290,7 @@ Download the file and paste it using <code>World Builder</code> at <code>(0, 0, 
 <h3> ✨ Unlimited World Code ✨</br> </h3>
 </div>
 
-Use second setup configuration method: Change `Configuration.blocks` at runtime, then reboot to evaluate a new batch of blocks.</br>
+Use second setup configuration method: Change `configuration.blocks` at runtime, then reboot to evaluate a new batch of blocks.</br>
 Code block at <code>(0, 2, 5)</code>:
 ```js
 if(!Codeloader.isBlockLocked(thisPos)) {
@@ -355,7 +355,7 @@ max_dequeue_per_tick:16,
 default_retry_delay_ms:0,
 default_retry_limit_ms:50,
 default_retry_interval_ms:0,
-default_retry_cooldown_ms:1000
+default_retry_cooldown_ms:500
 }),
 EVENT_REGISTRY:Object.seal({
 tick:null,
@@ -364,7 +364,7 @@ onPlayerJoin:[!0],
 onPlayerLeave:[!0],
 onPlayerJump:[!0],
 onRespawnRequest:[!1],
-playerCommand:[!0],
+playerCommand:[!1],
 onPlayerChat:[!1],
 onPlayerChangeBlock:[!1],
 onPlayerDropItem:[!1],
@@ -413,7 +413,7 @@ onPlayerUsedThrowable:[!0],
 onPlayerThrowableHitTerrain:[!0],
 onTouchscreenActionButton:[!0],
 onTaskClaimed:[!0],
-onChunkLoaded:[!0],
+onChunkLoaded:[!1],
 onPlayerRequestChunk:[!0],
 onItemDropCreated:[!0],
 onPlayerStartChargingItem:[!0],
@@ -479,7 +479,7 @@ max_dequeue_per_tick:16,
 default_retry_delay_ms:0,
 default_retry_limit_ms:50,
 default_retry_interval_ms:0,
-default_retry_cooldown_ms:1000
+default_retry_cooldown_ms:500
 }),
 EVENT_REGISTRY:Object.seal({
 tick:null,
@@ -488,7 +488,7 @@ onPlayerJoin:[!0],
 onPlayerLeave:[!0],
 onPlayerJump:[!0],
 onRespawnRequest:[!1],
-playerCommand:[!0],
+playerCommand:[!1],
 onPlayerChat:[!1],
 onPlayerChangeBlock:[!1],
 onPlayerDropItem:[!1],
@@ -537,7 +537,7 @@ onPlayerUsedThrowable:[!0],
 onPlayerThrowableHitTerrain:[!0],
 onTouchscreenActionButton:[!0],
 onTaskClaimed:[!0],
-onChunkLoaded:[!0],
+onChunkLoaded:[!1],
 onPlayerRequestChunk:[!0],
 onItemDropCreated:[!0],
 onPlayerStartChargingItem:[!0],
@@ -571,28 +571,28 @@ fontSize:"1rem"
 ## 🧯 Troubleshooting
 
 - <code>"Unregistered callbacks: ..."</code></br>
-  The event in `ACTIVE_EVENTS` has no entry in `EVENT_REGISTRY`. Either rename the event in `ACTIVE_EVENTS` or add an entry.
+: The event in `ACTIVE_EVENTS` has no entry in `EVENT_REGISTRY`. Either rename the event in `ACTIVE_EVENTS` or add an entry.
 
 - <code>"setInterruptionState - "..." interruption status is false."</code></br>
-  Ensure `interruption_manager.is_enabled = true` and that event's `interruptionStatus` flag is `true` in `EVENT_REGISTRY`.
+: Ensure `interruption_manager.is_enabled = true` and that event's `interruptionStatus` flag is `true` in `EVENT_REGISTRY`.
 
 - <code>"setInterruptionState - "..." is invalid active event name."</code></br>
-  Ensure the event is in `ACTIVE_EVENTS`.
+: Ensure the event is in `ACTIVE_EVENTS`.
 
 - <code>"Wait until current running boot session is finished."</code></br>
-  You called `Codeloader.reboot()` while the another boot session is aleady in progress. Try again after it finishes.
+: You called `Codeloader.reboot()` while the another boot session is already in progress. Try again after it finishes.
 
 - <code>"Uncaught error on events primary setup."</code> or <code>"Error on events primary setup - ..."</code></br>
-  Critical error inside the loader. Ensure the configuration is correct and reinstall it (paste copied version).
+: Critical error inside the loader. Ensure the configuration is correct and reinstall the loader source code (paste copied version again).
 
 - <code>No code executes from my blocks.</code></br>
-  Ensure block's `evalStatus` flag (or `default_eval_status`) is `true`.
+: Ensure block's `evalStatus` flag (or `default_eval_status`) is `true`.
 
 - <code>Changed config but behavior didn't update.</code></br>
-  Modify `configuration`, then call `Codeloader.reboot()` so the loader re‑reads settings.
+: Modify `configuration`, then call `Codeloader.reboot()` so the loader re‑reads settings.
 
 - <code>Interrupted events are never retried.</code></br>
-  Ensure the configuration is correct, the interruption manager is enabled (`interruption_manager.is_enabled = true`).</br>
-  Set the event `interruptionStatus` flag to `true` and inlcude `Codeloader.setInterruptionState(eventName)` in your underscored handler.
+: Ensure the configuration is correct, the interruption manager is enabled (`interruption_manager.is_enabled = true`).</br>
+  Set the event `interruptionStatus` flag to `true` and include `Codeloader.setInterruptionState(eventName)` inside your underscored handler (preferably on top).
 
 ---

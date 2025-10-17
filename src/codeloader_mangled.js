@@ -31,7 +31,7 @@ const CF=Object.seal({
     default_retry_delay_ms:0,
     default_retry_limit_ms:50,
     default_retry_interval_ms:0,
-    default_retry_cooldown_ms:1000
+    default_retry_cooldown_ms:500
   }),
   EVENT_REGISTRY:Object.seal({
     tick:null,
@@ -40,7 +40,7 @@ const CF=Object.seal({
     onPlayerLeave:[!0],
     onPlayerJump:[!0],
     onRespawnRequest:[!1],
-    playerCommand:[!0],
+    playerCommand:[!1],
     onPlayerChat:[!1],
     onPlayerChangeBlock:[!1],
     onPlayerDropItem:[!1],
@@ -89,7 +89,7 @@ const CF=Object.seal({
     onPlayerThrowableHitTerrain:[!0],
     onTouchscreenActionButton:[!0],
     onTaskClaimed:[!0],
-    onChunkLoaded:[!0],
+    onChunkLoaded:[!1],
     onPlayerRequestChunk:[!0],
     onItemDropCreated:[!0],
     onPlayerStartChargingItem:[!0],

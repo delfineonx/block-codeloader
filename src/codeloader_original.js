@@ -37,7 +37,7 @@ const Configuration = Object.seal({
     default_retry_delay_ms: 0,
     default_retry_limit_ms: 50,
     default_retry_interval_ms: 0,
-    default_retry_cooldown_ms: 1000,
+    default_retry_cooldown_ms: 500,
   }),
 
   // if event has special return value, then `interruptionStatus = false` setup is recommended
@@ -50,7 +50,7 @@ const Configuration = Object.seal({
     "onPlayerLeave": [true],
     "onPlayerJump": [true],
     "onRespawnRequest": [false],
-    "playerCommand": [true],
+    "playerCommand": [false],
     "onPlayerChat": [false],
     "onPlayerChangeBlock": [false],
     "onPlayerDropItem": [false],
@@ -99,7 +99,7 @@ const Configuration = Object.seal({
     "onPlayerThrowableHitTerrain": [true],
     "onTouchscreenActionButton": [true],
     "onTaskClaimed": [true],
-    "onChunkLoaded": [true],
+    "onChunkLoaded": [false],
     "onPlayerRequestChunk": [true],
     "onItemDropCreated": [true],
     "onPlayerStartChargingItem": [true],
