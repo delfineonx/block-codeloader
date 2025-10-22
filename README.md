@@ -6,7 +6,7 @@
 
 <p>
 Automatically boot your world code in deterministic phases, ensure target chunks are loaded, </br>
-then evaluate the code stored in your blocks data (<code>persisted.shared.text</code>).<br/>
+while evaluating the code stored in your blocks data (<code>persisted.shared.text</code>).<br/>
 Built-in <code>Join Manager</code> buffers <code>onPlayerJoin</code> during the boot session and correctly applies it.<br/>
 <code>Interruption Manager</code> provides utility to execute interrupted events under rate limit rules.
 </p>
