@@ -7,7 +7,7 @@
 <p>
 Automatically boot your world code in deterministic phases, ensure target chunks are loaded, </br>
 then evaluate the code stored in your blocks data (<code>persisted.shared.text</code>).<br/>
-Built-in <code>Join Queue</code> buffers <code>onPlayerJoin</code> during the boot session and correctly applies it.<br/>
+Built-in <code>Join Manager</code> buffers <code>onPlayerJoin</code> during the boot session and correctly applies it.<br/>
 <code>Interruption Manager</code> provides utility to execute interrupted events under rate limit rules.
 </p>
 
@@ -32,7 +32,8 @@ Copy the loader source code entirely into your <code>World Code</code>.<br/>
 
 * [`Minified version`](https://github.com/delfineonx/block-codeloader/blob/main/src/codeloader_minified.js)
 
-<h6>It self‑boots on the lobby creation/start by temporarily swapping `_tick` to a boot dispatcher.</h6>
+<h6>- It self‑boots on the lobby creation/start.<br/>
+- If you want, you may put some non-event functions or other objects right after the loader source code, if there is some free space in your <code>World Code</code>.</h6>
 
 ---
 
@@ -40,7 +41,7 @@ Copy the loader source code entirely into your <code>World Code</code>.<br/>
 
 ## ⚡ Quick Start
 
-Inside <code>World Code</code>: Declare the events you actually use (the order doesn't matter) and list your blocks positions.</br>
+Inside <code>World Code</code>: List the events you actually use (their order doesn't matter) and list your blocks positions (their order does matter).</br>
 
 ```js
 const CF=Object.seal({
@@ -64,16 +65,18 @@ const CF=Object.seal({
 });
 ```
 
-Inside your specified blocks: Use underscore "<code>_</code>" before event (callback) names.</br>
+Inside your specified blocks: distribute the world code as you need (it has no difference in comparison to real <code>World Code</code>).</br>
 
 ```js
-_tick = () => { }; // (2,2,2)
-_onPlayerJump = (playerId) => { }; // (4,2,2)
-_onPlayerChat = function (playerId, chatMessage, channelName) { }; // (6,2,2)
-_onPlayerJoin = function (playerId, fromGameReset) { }; // (8,2,2)
-_onPlayerLeave = function (playerId, serverIsShuttingDown) { }; // (8,2,2)
-_onRespawnRequest = (playerId) => { }; // (8,2,2)
+tick = () => { }; // (2,2,2)
+function onPlayerJump(playerId) { }; // (4,2,2)
+function onPlayerChat(playerId, chatMessage, channelName) { }; // (6,2,2)
+onPlayerJoin = function (playerId, fromGameReset) { }; // (8,2,2)
+onPlayerLeave = function (playerId, serverIsShuttingDown) { }; // (8,2,2)
+onRespawnRequest = (playerId) => { }; // (8,2,2)
 ```
+
+<h6>Both function declarations and (anonymous or arrow) function expressions assigned to global variables with event (callback) names are allowed.<h6>
 
 ---
 
@@ -89,8 +92,8 @@ const Configuration = Object.seal({
   ACTIVE_EVENTS: Object.freeze([ ... ]),
   blocks: [ ... ],
   boot_manager: Object.seal({ ... }),
-  join_queue: Object.seal({ ... }),
-  block_initializer: Object.seal({ ... }),
+  join_manager: Object.seal({ ... }),
+  block_manager: Object.seal({ ... }),
   interruption_manager: Object.seal({ ... }),
   EVENT_REGISTRY: Object.seal({ ... }),
   LOG_STYLE: Object.seal({ error: { ... }, warning: { ... }, success: { ... } })
@@ -101,8 +104,8 @@ const Configuration = Object.seal({
 Array of event (callback) names the loader should wire up (recommendation: include only what you are using).</br>
 For each <code>callbackName</code> the loader ensures:</br></br>
 
-- <code>globalThis._callbackName</code> exists (your handler; default to no‑op function if missing)</br>
-- <code>globalThis.callbackName(...args)</code> returns <code>_callbackName(...args)</code></br>
+- The delegator with <code>callbackName</code> exists (your evaled/assigned handler function; default to no‑op function if missing)</br>
+- Real <code>globalThis.callbackName(...args)</code> returns delegator call of <code>callbackName(...args)</code></br>
 
 Not listed events are ignored (no wrapper is created).</br>
 You can add or delete active events in the loader configuration only in <code>World Code</code>.</br>
@@ -115,37 +118,39 @@ Coordinates are integer‑floored internally. <code>lockedStatus</code> and <cod
 - <code><ins>lockedStatus</ins></code>:</br>
   - <code>true</code> -- the block is considered "locked" by the loader.</br>
   - <code>false</code> -- the block is considered "unlocked" by the loader.</br>
-  - omitted or <code>null</code> -- <code>block_initializer.default_locked_status</code> is used.</br>
+  - omitted or <code>null</code> -- <code>block_manager.default_locked_status</code> is used.</br>
 - <code><ins>evalStatus</ins></code>:</br>
   - <code>true</code> -- evaluate the block, once its chunk is loaded.</br>
   - <code>false</code> -- block evaluation is skipped, once its chunk is loaded.</br>
-  - omitted or <code>null</code> -- <code>block_initializer.default_eval_status</code> is used.</br>
+  - omitted or <code>null</code> -- <code>block_manager.default_eval_status</code> is used.</br>
 
-Coordinates must be in the range between <code>(−2^19)</code> and <code>(2^19−1)</code> for each axis.
+Coordinates are not limited by any number internally.</br>
+<code>lockedStatus = true</code> allows you to reinitialize everything under <code>isBlockLocked()</code> guard anytime when you eval data in the block (or click the code block).
 
 <h3>〔 <code><b>boot_manager</b></code> 〕</h3> 
 
 | Property | Type | Default | Notes |
 |---|---:|---:|---|
-| `boot_delay_ms` | number | `200` | Time to wait in milliseconds before the current boot session starts initializer phase. Min number is 0 (i.e. immediately). Converted to ticks and floored. |
+| `boot_delay_ms` | number | `200` | Time to wait in milliseconds before the current boot session (main process) starts. Min number is 0 (i.e. immediately). Converted to ticks and floored. |
 | `show_load_time` | boolean | `true` | Whether to broadcast the total load time after the boot session is finished. |
 | `show_errors` | boolean | `true` | Whether to broadcast collected evaluation errors after the boot session is finished. |
 
-<h3>〔 <code><b>join_queue</b></code> 〕</h3> 
+<h3>〔 <code><b>join_manager</b></code> 〕</h3> 
 
 | Property | Type | Default | Notes |
 |---|---:|---:|---|
-| `reset_on_reboot` | boolean | `true` | Whether to apply <code>_onPlayerJoin</code> <ins>again</ins> (usually on reboot) for all currently online players, i.e. it will be called for each player even if it has been already called for them (processed) before. |
-| `max_dequeue_per_tick` | number | `8` | Max `_onPlayerJoin` entries (players) processed per tick during the boot session. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
+| `reset_on_reboot` | boolean | `true` | Whether to apply <code>onPlayerJoin</code> delegator <ins>again</ins> (usually on reboot) for all currently online players, i.e. it will be called for each player even if it has been already called for them (processed) before. |
+| `max_dequeue_per_tick` | number | `8` | Max `onPlayerJoin` delegator entries (players) processed per tick during the boot session. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
 
-<h3>〔 <code><b>block_initializer</b></code> 〕</h3> 
+<h3>〔 <code><b>block_manager</b></code> 〕</h3> 
 
 | Property | Type | Default | Notes |
 |---|---:|---:|---|
 | `default_locked_status` | boolean | `true` | Default when block's entry `lockedStatus` is `null`/`undefined`. |
 | `default_eval_status` | boolean | `true` | Default when block's entry `evalStatus` is `null`/`undefined`. |
-| `max_registrations_per_tick` | number | `32` | Max blocks are internally registered per tick during seeding process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
-| `max_evals_per_tick` | number | `16` | Max blocks are evaluated per tick during initializing process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
+| `max_registrations_per_tick` | number | `32` | Max blocks internally registered per tick during seeding process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
+| `max_requests_per_tick` | number | `8` | Max chunks processed (requested or checked) per tick during initializing process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
+| `max_evals_per_tick` | number | `16` | Max blocks evaluated per tick during initializing process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
 | `max_error_logs` | number | `32` | Max errors to retain and optionally broadcast. Min number is 0 (i.e. no errors are saved and logged). Converted to integer and floored. |
 
 <h3>〔 <code><b>interruption_manager</b></code> 〕</h3> 
@@ -243,7 +248,7 @@ isBlockLocked(position)
 /**
  * Start the new boot using the current (last) configuration.
  * Broadcast warning if the boot session is already running.
- * Replaces `_tick` with the boot tick dispatcher until the boot completes.
+ * Replaces `tick` with the boot tick dispatcher until the boot completes.
  *
  * @returns {void}
  */
@@ -304,7 +309,7 @@ Codeloader.configuration.blocks = [
 Codeloader.configuration.boot_manager.show_load_time = true;
 Codeloader.configuration.boot_manager.show_errors = true;
 
-_tick = () => {
+tick = () => {
   if(!Codeloader.isRunning) {
     Codeloader.reboot();
   }
@@ -336,18 +341,19 @@ blocks:[
 boot_manager:Object.seal({
 boot_delay_ms:200,
 show_load_time:true,
-show_errors:true
+show_errors:true,
 }),
-join_queue:Object.seal({
-reset_on_reboot:true,
-max_dequeue_per_tick:8
-}),
-block_initializer:Object.seal({
+block_manager:Object.seal({
 default_locked_status:true,
 default_eval_status:true,
 max_registrations_per_tick:32,
+max_requests_per_tick:8,
 max_evals_per_tick:16,
-max_error_logs:32
+max_error_logs:32,
+}),
+join_manager:Object.seal({
+reset_on_reboot:true,
+max_dequeue_per_tick:8,
 }),
 interruption_manager:Object.seal({
 is_enabled:true,
@@ -355,7 +361,7 @@ max_dequeue_per_tick:16,
 default_retry_delay_ms:0,
 default_retry_limit_ms:50,
 default_retry_interval_ms:0,
-default_retry_cooldown_ms:500
+default_retry_cooldown_ms:500,
 }),
 EVENT_REGISTRY:Object.seal({
 tick:null,
@@ -413,29 +419,17 @@ onPlayerUsedThrowable:[!0],
 onPlayerThrowableHitTerrain:[!0],
 onTouchscreenActionButton:[!0],
 onTaskClaimed:[!0],
-onChunkLoaded:[!1],
+onChunkLoaded:[!0],
 onPlayerRequestChunk:[!0],
 onItemDropCreated:[!0],
 onPlayerStartChargingItem:[!0],
 onPlayerFinishChargingItem:[!0],
-doPeriodicSave:[!0]
+doPeriodicSave:[!0],
 }),
 LOG_STYLE:Object.seal({
-error:{
-color:"#ff9d87",
-fontWeight:"600",
-fontSize:"1rem"
-},
-warning:{
-color:"#fcd373",
-fontWeight:"600",
-fontSize:"1rem"
-},
-success:{
-color:"#2eeb82",
-fontWeight:"600",
-fontSize:"1rem"
-}
+error:{color:"#ff9d87",fontWeight:"600",fontSize:"1rem"},
+warning:{color:"#fcd373",fontWeight:"600",fontSize:"1rem"},
+success:{color:"#2eeb82",fontWeight:"600",fontSize:"1rem"},
 })
 });
 ```
@@ -460,18 +454,19 @@ blocks:[
 boot_manager:Object.seal({
 boot_delay_ms:200,
 show_load_time:false,
-show_errors:false
+show_errors:false,
 }),
-join_queue:Object.seal({
-reset_on_reboot:true,
-max_dequeue_per_tick:8
-}),
-block_initializer:Object.seal({
+block_manager:Object.seal({
 default_locked_status:true,
 default_eval_status:true,
 max_registrations_per_tick:32,
+max_requests_per_tick:8,
 max_evals_per_tick:16,
-max_error_logs:32
+max_error_logs:32,
+}),
+join_manager:Object.seal({
+reset_on_reboot:true,
+max_dequeue_per_tick:8,
 }),
 interruption_manager:Object.seal({
 is_enabled:true,
@@ -479,7 +474,7 @@ max_dequeue_per_tick:16,
 default_retry_delay_ms:0,
 default_retry_limit_ms:50,
 default_retry_interval_ms:0,
-default_retry_cooldown_ms:500
+default_retry_cooldown_ms:500,
 }),
 EVENT_REGISTRY:Object.seal({
 tick:null,
@@ -537,29 +532,17 @@ onPlayerUsedThrowable:[!0],
 onPlayerThrowableHitTerrain:[!0],
 onTouchscreenActionButton:[!0],
 onTaskClaimed:[!0],
-onChunkLoaded:[!1],
+onChunkLoaded:[!0],
 onPlayerRequestChunk:[!0],
 onItemDropCreated:[!0],
 onPlayerStartChargingItem:[!0],
 onPlayerFinishChargingItem:[!0],
-doPeriodicSave:[!0]
+doPeriodicSave:[!0],
 }),
 LOG_STYLE:Object.seal({
-error:{
-color:"#ff9d87",
-fontWeight:"600",
-fontSize:"1rem"
-},
-warning:{
-color:"#fcd373",
-fontWeight:"600",
-fontSize:"1rem"
-},
-success:{
-color:"#2eeb82",
-fontWeight:"600",
-fontSize:"1rem"
-}
+error:{color:"#ff9d87",fontWeight:"600",fontSize:"1rem"},
+warning:{color:"#fcd373",fontWeight:"600",fontSize:"1rem"},
+success:{color:"#2eeb82",fontWeight:"600",fontSize:"1rem"},
 })
 });
 ```
@@ -583,7 +566,7 @@ fontSize:"1rem"
 : You called `Codeloader.reboot()` while the another boot session is already in progress. Try again after it finishes.
 
 - <code>"Uncaught error on events primary setup."</code> or <code>"Error on events primary setup - ..."</code></br>
-: Critical error inside the loader. Ensure the configuration is correct and reinstall the loader source code (paste copied version again).
+: Critical error inside the loader. Ensure the configuration is correct and reinstall the loader source code (paste minified version again).
 
 - <code>No code executes from my blocks.</code></br>
 : Ensure block's `evalStatus` flag (or `default_eval_status`) is `true`.
