@@ -216,7 +216,7 @@ isRunning
 /*
  * Shallow copy of collected evaluation errors from the last boot session.
  * Each entry: [x, y, z, errorName, errorMessage].
- * It is reseted at the start of each boot session.
+ * It resets at the start of each boot session.
  */
 errors
 
@@ -232,8 +232,7 @@ errors
 setInterruptionState(eventName)
 
 /**
- * Floor coordinates and return the lock state of a block at `position` is "locked".
- * Coordinates must be in the range between (−2^19) and (2^19−1) for each axis.
+ * Floor coordinates and return the lock state of a block at `position`.
  * Behavior:
  *  - During boot session, ALWAYS returns `false` ("unlocked").
  *  - If the block was not registered (in `configuration.blocks`) before boot, it is considered as "locked".
