@@ -575,6 +575,6 @@ success:{color:"#2eeb82",fontWeight:"600",fontSize:"1rem"},
 
 - <code>Interrupted events are never retried.</code></br>
 : Ensure the configuration is correct, the interruption manager is enabled (`interruption_manager.is_enabled = true`).</br>
-  Set the event `interruptionStatus` flag to `true` and include `Codeloader.setInterruptionState(eventName)` inside your underscored handler (preferably on top).
+  Set the event `interruptionStatus` flag to `true` and include `Codeloader.setInterruptionState(eventName)` inside your (event delegator) handler (preferably on top).
 
 ---
