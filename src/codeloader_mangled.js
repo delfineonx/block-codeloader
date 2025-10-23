@@ -158,7 +158,8 @@ const EM={
             g=n[2];
             d[v]=I.N[v]=function(){I.i_(c)};
             globalThis[v]=function(a0,a1,a2,a3,a4,a5,a6,a7,a8){
-              i[c>>5]|=q[c>>5]|=(1<<(c & 31));
+              q[c>>5]|=(1<<(c&31));
+              i[c>>5]|=(1<<(c&31));
               n[1]=I.n;
               g[0]=a0;
               g[1]=a1;

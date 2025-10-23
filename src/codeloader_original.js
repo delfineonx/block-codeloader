@@ -187,7 +187,8 @@ const EventManager = {
             const args = eventData[2];
             delegator[eventName] = interruption_manager.NOOP[eventName] = function () { interruption_manager.setInterruptionState(eventIndex); };
             globalThis[eventName] = function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
-              iterationStateMask[eventIndex >> 5] |= dequeueStateMask[eventIndex >> 5] |= (1 << (eventIndex & 31));
+              dequeueStateMask[eventIndex >> 5] |= (1 << (eventIndex & 31));
+              iterationStateMask[eventIndex >> 5] |= (1 << (eventIndex & 31));
               eventData[1] = interruption_manager.tickCount;
               args[0] = arg0;
               args[1] = arg1;
