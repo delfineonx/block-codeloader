@@ -145,73 +145,72 @@ const EventManager = {
   established: false,
 
   primarySetup() {
-    if (this.isPrimarySetupDone) {
-      return;
-    }
-    const isInterruptionManagerEnabled = !!Configuration.interruption_manager.is_enabled;
-    const primaryEventRegistry = Configuration.EVENT_REGISTRY;
-    const primaryActiveEvents = Configuration.ACTIVE_EVENTS;
+    if (!this.isPrimarySetupDone) {
+      const isInterruptionManagerEnabled = !!Configuration.interruption_manager.is_enabled;
+      const primaryEventRegistry = Configuration.EVENT_REGISTRY;
+      const primaryActiveEvents = Configuration.ACTIVE_EVENTS;
 
-    const NOOP = this.NOOP = function () { };
-    const delegator = this.delegator;
-    const activeEvents = this.activeEvents = [];
-    const isEventActive = this.isEventActive = {};
-    const unregisteredActiveEvents = this.unregisteredActiveEvents = [];
+      const NOOP = this.NOOP = function () { };
+      const delegator = this.delegator;
+      const activeEvents = this.activeEvents = [];
+      const isEventActive = this.isEventActive = {};
+      const unregisteredActiveEvents = this.unregisteredActiveEvents = [];
 
-    const interruption_manager = this.interruption_manager;
-    interruption_manager.NOOP = {};
-    const eventIndexByName = interruption_manager.eventIndexByName = {};
-    const eventDataByIndex = interruption_manager.eventDataByIndex = [];
-    interruption_manager.defaultRetryTicks = new Int32Array(4);
-    const eventRetryTicksByIndex = interruption_manager.eventRetryTicksByIndex = [];
-    const dequeueStateMask = interruption_manager.dequeueStateMask = new Uint32Array(2);
-    const iterationStateMask = interruption_manager.iterationStateMask = new Uint32Array(2);
+      const interruption_manager = this.interruption_manager;
+      interruption_manager.NOOP = {};
+      const eventIndexByName = interruption_manager.eventIndexByName = {};
+      const eventDataByIndex = interruption_manager.eventDataByIndex = [];
+      interruption_manager.defaultRetryTicks = new Int32Array(4);
+      const eventRetryTicksByIndex = interruption_manager.eventRetryTicksByIndex = [];
+      const dequeueStateMask = interruption_manager.dequeueStateMask = new Uint32Array(2);
+      const iterationStateMask = interruption_manager.iterationStateMask = new Uint32Array(2);
 
-    let interruptionEventIndex = 0;
-    for (const eventName of primaryActiveEvents) {
-      if (!Object.hasOwn(primaryEventRegistry, eventName)) {
-        unregisteredActiveEvents[unregisteredActiveEvents.length] = eventName;
-        continue;
-      }
-      activeEvents[activeEvents.length] = eventName;
-      isEventActive[eventName] = true;
-      if (eventName !== "tick") {
-        if (!Array.isArray(primaryEventRegistry[eventName])) {
-          primaryEventRegistry[eventName] = [];
+      let interruptionEventIndex = 0;
+      for (const eventName of primaryActiveEvents) {
+        if (!Object.hasOwn(primaryEventRegistry, eventName)) {
+          unregisteredActiveEvents[unregisteredActiveEvents.length] = eventName;
+          continue;
         }
-        const interruptionStatus = primaryEventRegistry[eventName][0] = !!primaryEventRegistry[eventName][0];
-        if (isInterruptionManagerEnabled && interruptionStatus) {
-          interruption_manager.isActive = true;
-          const eventIndex = interruptionEventIndex;
-          eventIndexByName[eventName] = eventIndex;
-          eventRetryTicksByIndex[eventIndex] = new Int32Array(6);
-          const eventData = eventDataByIndex[eventIndex] = [eventName, -1, new Array(9)];
-          const args = eventData[2];
-          delegator[eventName] = interruption_manager.NOOP[eventName] = function () { interruption_manager.setInterruptionState(eventIndex); };
-          globalThis[eventName] = function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
-            iterationStateMask[eventIndex >> 5] |= dequeueStateMask[eventIndex >> 5] |= (1 << (eventIndex & 31));
-            eventData[1] = interruption_manager.tickCount;
-            args[0] = arg0;
-            args[1] = arg1;
-            args[2] = arg2;
-            args[3] = arg3;
-            args[4] = arg4;
-            args[5] = arg5;
-            args[6] = arg6;
-            args[7] = arg7;
-            args[8] = arg8;
-            return delegator[eventName](arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-          };
-          interruptionEventIndex++;
-        } else {
-          delegator[eventName] = NOOP;
-          globalThis[eventName] = function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
-            return delegator[eventName](arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-          };
+        activeEvents[activeEvents.length] = eventName;
+        isEventActive[eventName] = true;
+        if (eventName !== "tick") {
+          if (!Array.isArray(primaryEventRegistry[eventName])) {
+            primaryEventRegistry[eventName] = [];
+          }
+          const interruptionStatus = primaryEventRegistry[eventName][0] = !!primaryEventRegistry[eventName][0];
+          if (isInterruptionManagerEnabled && interruptionStatus) {
+            interruption_manager.isActive = true;
+            const eventIndex = interruptionEventIndex;
+            eventIndexByName[eventName] = eventIndex;
+            eventRetryTicksByIndex[eventIndex] = new Int32Array(6);
+            const eventData = eventDataByIndex[eventIndex] = [eventName, -1, new Array(9)];
+            const args = eventData[2];
+            delegator[eventName] = interruption_manager.NOOP[eventName] = function () { interruption_manager.setInterruptionState(eventIndex); };
+            globalThis[eventName] = function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+              iterationStateMask[eventIndex >> 5] |= dequeueStateMask[eventIndex >> 5] |= (1 << (eventIndex & 31));
+              eventData[1] = interruption_manager.tickCount;
+              args[0] = arg0;
+              args[1] = arg1;
+              args[2] = arg2;
+              args[3] = arg3;
+              args[4] = arg4;
+              args[5] = arg5;
+              args[6] = arg6;
+              args[7] = arg7;
+              args[8] = arg8;
+              return delegator[eventName](arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            };
+            interruptionEventIndex++;
+          } else {
+            delegator[eventName] = NOOP;
+            globalThis[eventName] = function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+              return delegator[eventName](arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            };
+          }
         }
       }
+      this.isPrimarySetupDone = true;
     }
-    this.isPrimarySetupDone = true;
   },
 
   primaryInstall() {
@@ -908,6 +907,9 @@ const BootManager = {
   tick() {
     const self = BootManager;
     self.tickCount++;
+    if (self.phase === -1) {
+      return self._ensurePrimarySetup();
+    }
     if (self.phase === 0) {
       self._startBoot();
     }
@@ -940,19 +942,22 @@ const BootManager = {
     }
   },
 
-  _startBoot() {
-    if (!this.isRunning) {
-      this.tickCount = 0;
-
-      if (!this.event_manager.isPrimarySetupDone) {
+  _ensurePrimarySetup() {
+    if (this.isPrimaryBoot) {
+      if (!this.event_manager.isPrimarySetupDone && this.tickCount >= 10) {
         const error = this.event_manager.primarySetupError;
         const logs = `Codeloader: EventManager: ${(error === null) ? "Uncaught e" : "E"}rror on events primary setup${(error === null) ? "." : ` - ${error[0]}: ${error[1]}.`}`;
         const playerIds = api.getPlayerIds();
         for (const playerId of playerIds) {
           api.kickPlayer(playerId, logs);
         }
-        return;
       }
+    }
+  },
+
+  _startBoot() {
+    if (!this.isRunning) {
+      this.tickCount = 0;
 
       const thisConfiguration = Configuration.boot_manager;
       const bootDelayTicks = ((thisConfiguration.boot_delay_ms | 0) * 0.02) | 0;
@@ -1049,12 +1054,12 @@ const BootManager = {
       this.join_manager.finalize();
     }
     this.tick_multiplexer.finalize();
+    this.block_manager.phase = -1;
+    this.isPrimaryBoot = false;
+    this.isRunning = false;
+    this.phase = -1;
 
     this.loadTimeTicks = this.tickCount - this.bootDelayTicks + 1;
-    this.block_manager.phase = -1;
-    this.phase = -1;
-    this.isRunning = false;
-
     this.logBootResult(this.showLoadTime, this.showErrors);
   },
 
@@ -1143,7 +1148,6 @@ globalThis.Codeloader = Object.freeze({
 
   reboot() {
     if (!BootManager.isRunning) {
-      BootManager.isPrimaryBoot = false;
       EventManager.delegator.tick = BootManager.tick;
       BootManager.phase = 0;
     } else {
@@ -1192,6 +1196,7 @@ BootManager.block_manager = BlockManager;
   BootManager.phase = -1;
   BootManager.isPrimaryBoot = true;
   BootManager.isRunning = false;
+  BootManager.tickCount = 0;
   delegator.tick = BootManager.tick;
   globalThis.tick = function () {
     delegator.tick();
@@ -1200,10 +1205,9 @@ BootManager.block_manager = BlockManager;
 
 try {
   EventManager.primarySetup();
+  BootManager.phase = 0;
 } catch (e) {
   EventManager.primarySetupError = [e.name, e.message];
 }
-
-BootManager.phase = 0;
 
 void 0;

@@ -119,70 +119,69 @@ const EM={
   e:!1,
   s_(){
     let S=this;
-    if(S.P){
-      return
-    }
-    let l=!!CF.interruption_manager.is_enabled,
-    R=CF.EVENT_REGISTRY,
-    V=CF.ACTIVE_EVENTS,
-    N=S.N=function(){},
-    d=S.d,
-    A=S.A=[],
-    a=S.a={},
-    u=S.u=[],
-    I=S.I;
-    I.N={};
-    let X=I.I={},
-    D=I.D=[];
-    I.U=new Int32Array(4);
-    let Y=I.Y=[],
-    q=I.q=new Uint32Array(2),
-    i=I.i=new Uint32Array(2),
-    x=0;
-    for(let v of V){
-      if(!Object.hasOwn(R,v)){
-        u[u.length]=v;
-        continue
-      }
-      A[A.length]=v;
-      a[v]=!0;
-      if("tick"!==v) {
-        if(!Array.isArray(R[v])){
-          R[v]=[]
+    if(!S.P){
+      let l=!!CF.interruption_manager.is_enabled,
+      R=CF.EVENT_REGISTRY,
+      V=CF.ACTIVE_EVENTS,
+      N=S.N=function(){},
+      d=S.d,
+      A=S.A=[],
+      a=S.a={},
+      u=S.u=[],
+      I=S.I;
+      I.N={};
+      let X=I.I={},
+      D=I.D=[];
+      I.U=new Int32Array(4);
+      let Y=I.Y=[],
+      q=I.q=new Uint32Array(2),
+      i=I.i=new Uint32Array(2),
+      x=0;
+      for(let v of V){
+        if(!Object.hasOwn(R,v)){
+          u[u.length]=v;
+          continue
         }
-        let s=R[v][0]=!!R[v][0];
-        if(l&&s){
-          I.a=!0;
-          let c=x;
-          X[v]=c;
-          Y[c]=new Int32Array(6);
-          let n=D[c]=[v,-1,new Array(9)],
-          g=n[2];
-          d[v]=I.N[v]=function(){I.i_(c)};
-          globalThis[v]=function(a0,a1,a2,a3,a4,a5,a6,a7,a8){
-            i[c>>5]|=q[c>>5]|=(1<<(c & 31));
-            n[1]=I.n;
-            g[0]=a0;
-            g[1]=a1;
-            g[2]=a2;
-            g[3]=a3;
-            g[4]=a4;
-            g[5]=a5;
-            g[6]=a6;
-            g[7]=a7;
-            g[8]=a8;
-            return d[v](a0,a1,a2,a3,a4,a5,a6,a7,a8)
-          };
-          x++
-        }else{
-          d[v]=N;
-          globalThis[v]=function(a0,a1,a2,a3,a4,a5,a6,a7,a8){
-            return d[v](a0,a1,a2,a3,a4,a5,a6,a7,a8)
+        A[A.length]=v;
+        a[v]=!0;
+        if("tick"!==v) {
+          if(!Array.isArray(R[v])){
+            R[v]=[]
+          }
+          let s=R[v][0]=!!R[v][0];
+          if(l&&s){
+            I.a=!0;
+            let c=x;
+            X[v]=c;
+            Y[c]=new Int32Array(6);
+            let n=D[c]=[v,-1,new Array(9)],
+            g=n[2];
+            d[v]=I.N[v]=function(){I.i_(c)};
+            globalThis[v]=function(a0,a1,a2,a3,a4,a5,a6,a7,a8){
+              i[c>>5]|=q[c>>5]|=(1<<(c & 31));
+              n[1]=I.n;
+              g[0]=a0;
+              g[1]=a1;
+              g[2]=a2;
+              g[3]=a3;
+              g[4]=a4;
+              g[5]=a5;
+              g[6]=a6;
+              g[7]=a7;
+              g[8]=a8;
+              return d[v](a0,a1,a2,a3,a4,a5,a6,a7,a8)
+            };
+            x++
+          }else{
+            d[v]=N;
+            globalThis[v]=function(a0,a1,a2,a3,a4,a5,a6,a7,a8){
+              return d[v](a0,a1,a2,a3,a4,a5,a6,a7,a8)
+            }
           }
         }
       }
+      S.P=!0
     }
-    S.P=!0
   },
   i_(){
     let S=this;
@@ -775,6 +774,9 @@ OM={
   tick(){
     let S=OM;
     S.n++;
+    if(-1===S.h){
+      return S.u_()
+    }
     if(0===S.h){
       S.b_()
     }
@@ -785,7 +787,7 @@ OM={
       return S.e_()
     }
     if(3===S.h){
-      S.S_()
+      S.p_()
     }
     if(4===S.h){
       S.s_()
@@ -806,19 +808,23 @@ OM={
       S.f_()
     }
   },
-  b_(){
+  u_(){
     let S=this;
-    if(!S.R){
-      S.n=0;
-      if(!S.E.P){
+    if(S.P){
+      if(!S.E.P&&S.n>=10){
         let e=S.E.E,
         o=`Codeloader: EventManager: ${(null===e)?"Uncaught e":"E"}rror on events primary setup${(null===e)?".":` - ${e[0]}: ${e[1]}.`}`,
         l=api.getPlayerIds();
         for(let p of l){
           api.kickPlayer(p,o)
         }
-        return
       }
+    }
+  },
+  b_(){
+    let S=this;
+    if(!S.R){
+      S.n=0;
       let C=CF.boot_manager,
       d=((0|C.boot_delay_ms)*.02)|0;
       S.d=d&~(d>>31);
@@ -854,7 +860,7 @@ OM={
     S.h=3
   },
   
-  S_(){
+  p_(){
     let c=1;
     if(this.P){
       c&=this.E.i_()
@@ -907,10 +913,11 @@ OM={
       S.J.f_()
     }
     S.T.f_();
-    S.t=S.n-S.d+1;
     S.B.h=-1;
-    S.h=-1;
+    S.P=!1;
     S.R=!1;
+    S.h=-1;
+    S.t=S.n-S.d+1;
     S.R_(S.l,S.e)
   },
   R_(l,e){
@@ -981,7 +988,6 @@ globalThis.Codeloader=Object.freeze({
   },
   reboot(){
     if(!OM.R){
-      OM.P=!1;
       EM.d.tick=OM.tick;
       OM.h=0
     }else{
@@ -1024,15 +1030,16 @@ OM.B=BM;
   OM.h=-1;
   OM.P=!0;
   OM.R=!1;
+  OM.n=0;
   d.tick=OM.tick;
   globalThis.tick=function(){
     d.tick()
   }
 }
 try{
-  EM.s_()
+  EM.s_();
+  OM.h=0
 }catch(e){
   EM.E=[e.name,e.message]
 }
-OM.h=0;
 void 0;
