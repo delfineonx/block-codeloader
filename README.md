@@ -564,8 +564,8 @@ success:{color:"#2eeb82",fontWeight:"600",fontSize:"1rem"},
 - <code>"Wait until current running boot session is finished."</code></br>
 : You called `Codeloader.reboot()` while the another boot session is already in progress. Try again after it finishes.
 
-- <code>"Uncaught error on events primary setup."</code> or <code>"Error on events primary setup - ..."</code></br>
-: Critical error inside the loader. Ensure the configuration is correct and reinstall the loader source code (paste minified version again).
+- <code>"Undefined error on events primary setup."</code> or <code>"Error on events primary setup - ..."</code></br>
+: Loader internal critical error. Ensure the configuration is correct or reinstall the loader source code (paste minified version again).
 
 - <code>No code executes from my blocks.</code></br>
 : Ensure block's `evalStatus` flag (or `default_eval_status`) is `true`.
@@ -575,6 +575,6 @@ success:{color:"#2eeb82",fontWeight:"600",fontSize:"1rem"},
 
 - <code>Interrupted events are never retried.</code></br>
 : Ensure the configuration is correct, the interruption manager is enabled (`interruption_manager.is_enabled = true`).</br>
-  Set the event `interruptionStatus` flag to `true` and include `Codeloader.setInterruptionState(eventName)` inside your (event delegator) handler (preferably on top).
+  Set the event `interruptionStatus` flag to `true` and include `Codeloader.setInterruptionState(eventName)` inside your (user defined delegator) callback function (preferably on top).
 
 ---

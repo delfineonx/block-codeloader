@@ -813,7 +813,7 @@ OM={
     if(S.P){
       if(!S.E.P&&S.n>=10){
         let e=S.E.E,
-        o=`Codeloader: EventManager: ${(null===e)?"Uncaught e":"E"}rror on events primary setup${(null===e)?".":` - ${e[0]}: ${e[1]}.`}`,
+        o=`Codeloader: EventManager: ${(null===e)?"Undefined e":"E"}rror on events primary setup${(null===e)?".":` - ${e[0]}: ${e[1]}.`}`,
         l=api.getPlayerIds();
         for(let p of l){
           api.kickPlayer(p,o)

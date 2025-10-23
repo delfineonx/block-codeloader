@@ -946,7 +946,7 @@ const BootManager = {
     if (this.isPrimaryBoot) {
       if (!this.event_manager.isPrimarySetupDone && this.tickCount >= 10) {
         const error = this.event_manager.primarySetupError;
-        const logs = `Codeloader: EventManager: ${(error === null) ? "Uncaught e" : "E"}rror on events primary setup${(error === null) ? "." : ` - ${error[0]}: ${error[1]}.`}`;
+        const logs = `Codeloader: EventManager: ${(error === null) ? "Undefined e" : "E"}rror on events primary setup${(error === null) ? "." : ` - ${error[0]}: ${error[1]}.`}`;
         const playerIds = api.getPlayerIds();
         for (const playerId of playerIds) {
           api.kickPlayer(playerId, logs);
