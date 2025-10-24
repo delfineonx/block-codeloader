@@ -33,7 +33,7 @@ Copy the loader source code entirely into your <code>World Code</code>.<br/>
 * [`Minified version`](https://github.com/delfineonx/block-codeloader/blob/main/src/codeloader_minified.js)
 
 <h6>- It self‑boots on the lobby creation/start.<br/>
-- If you want, you may put some non-event functions or other objects right after the loader source code, if there is some free space in your <code>World Code</code>.</h6>
+- If you want, you may put some non-event (non-callback) type functions or other objects right after the loader source code, if there is some free space in your <code>World Code</code>.</h6>
 
 ---
 
@@ -125,7 +125,7 @@ Coordinates are integer‑floored internally. <code>lockedStatus</code> and <cod
   - omitted or <code>null</code> -- <code>block_manager.default_eval_status</code> is used.</br>
 
 Coordinates are not limited by any number internally.</br>
-<code>lockedStatus = true</code> allows you to reinitialize everything under <code>isBlockLocked()</code> guard anytime when you eval data in the block (or click the code block).
+<code>lockedStatus = false</code> allows you to reinitialize everything under <code>!isBlockLocked()</code> guard anytime when you eval data in the block (or click the code block).
 
 <h3>〔 <code><b>boot_manager</b></code> 〕</h3> 
 
@@ -162,7 +162,7 @@ Coordinates are not limited by any number internally.</br>
 | `default_retry_delay_ms` | number | `0` | Default when event's registry entry `delayMs` is `null`/`undefined`. Min number is 0 (i.e. immediately -- in the same tick or the next one). Converted to ticks and floored. |
 | `default_retry_limit_ms` | number | `50` | Default when event's registry entry `limitMs` is `null`/`undefined`. Min number is 0 (i.e. no retries). Converted to ticks and floored. |
 | `default_retry_interval_ms` | number | `0` | Default when event's registry entry `intervalMs` is `null`/`undefined`. Min number is 0 (i.e. no interval between retries). Converted to ticks and floored. |
-| `default_retry_cooldown_ms` | number | `1000` | Default when event's registry entry `cooldownMs` is `null`/`undefined`. Min number is 1 (i.e. at least 1 tick of cooldown for the current event if its limit is reached). Converted to ticks and floored. |
+| `default_retry_cooldown_ms` | number | `500` | Default when event's registry entry `cooldownMs` is `null`/`undefined`. Min number is 1 (i.e. at least 1 tick of cooldown for the current event if its limit is reached). Converted to ticks and floored. |
 
 <h3>〔 <code><b>EVENT_REGISTRY</b></code> 〕</h3> 
 
@@ -279,7 +279,7 @@ logLoadTime(showErrors = true)
 logErrors()
 ```
 
-> **Tip**: Use <code>isBlockLocked()</code> in your blocks as a guard (codition block) to avoid unwanted (re-)initialization of the code.
+> **Tip**: Use <code>!isBlockLocked()</code> in your blocks as a guard (codition block) to avoid unwanted (re-)initialization of the code.
 
 ---
 
@@ -294,7 +294,7 @@ Download the file and paste it using <code>World Builder</code> at <code>(0, 0, 
 <h3> ✨ Unlimited World Code ✨</br> </h3>
 </div>
 
-Use second setup configuration method: Change `configuration.blocks` at runtime, then reboot to evaluate a new batch of blocks.</br>
+Change `configuration.blocks` at runtime, then reboot to evaluate a new batch of blocks (second test setup configuration for <code>World Code</code>).</br>
 Code block at <code>(0, 2, 5)</code>:
 ```js
 if(!Codeloader.isBlockLocked(thisPos)) {
