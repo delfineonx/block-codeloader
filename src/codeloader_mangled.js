@@ -361,7 +361,7 @@ IM={
       r=((y[3]+y[4])/(y[4]+1))|0;
       if(r>1){
         api.broadcastMessage([{
-          str:`Codeloader: InterruptionManager: "${s.d[0]}" has been dropped after ${r} consecutive interrupted retry ticks.`,
+          str:"Codeloader: InterruptionManager: \""+s.d[0]+"\" has been dropped after "+r+" consecutive interrupted retry ticks.",
           style:s.B.g?.e??{}
         }])
       }
@@ -459,11 +459,9 @@ TM={
         Object.defineProperty(globalThis,"tick",{
           configurable:!0,
           set:F=>{d.tick=[N,F][+("function"===typeof F)]}
-        }),
-        d.tick=S.m
-      }else{
-        d.tick=S.t_
+        })
       }
+      d.tick=[S.m,S.t_][+S.I.a];
       S.b=N;
       S.i=N;
       S.f=!0
@@ -616,7 +614,7 @@ BM={
       S.K={};
       S.L={};
       S.Q=[];
-      S.E=[];
+      S.E=[null];
       S.N=!1;
       S.g=0;
       S.r=0;
@@ -691,7 +689,8 @@ BM={
       }
     }
     {
-      let b=S.b,
+      let _=[null,null],
+      b=S.b,
       O=S.O,
       E=S.E,
       n=b.length,
@@ -714,9 +713,10 @@ BM={
           let C=api.getBlockData(x,y,z)?.persisted?.shared?.text;
           (0,eval)(C)
         }catch(e){
-          if(E.length<O){
-            E[E.length]=[x,y,z,e.name,e.message]
-          }
+          let N=E.length-1;
+          _[0]=E[N*(N<O)];
+          _[1]=[x,y,z,e.name,e.message];
+          E[(N+1)*(N<O)]=_[+(N<O)]
         }
         c=++S.a;
         u--
@@ -870,7 +870,7 @@ OM={
     let u=this.E.u;
     if(u.length){
       api.broadcastMessage([{
-        str:`Codeloader: EventManager: Unregistered callbacks: ${u.join(", ")}.`,
+        str:"Codeloader: EventManager: Unregistered callbacks: "+u.join(", ")+".",
         style:this.g?.w??{}
       }])
     }
@@ -879,19 +879,23 @@ OM={
   },
   l_(e){
     let t=50*this.t,
-    c=this.B.E.length,
-    o=`Codeloader: BootManager: Code was loaded in ${t} ms` + [`.`, ` with ${c} error${c === 1 ? "" : "s"}.`][+(e)];
+    c=this.B.E.length-1,
+    o="Codeloader: BootManager: Code was loaded in "+t+" ms"+["."," with "+c+" error"+["s",""][+(1===c)]+"."][+e];
     api.broadcastMessage([{
       str:o,
       style:[this.g?.s,this.g?.w][+(c>0)]??{}
     }])
   },
   e_(){
-    let E=this.B.E;
-    if(E.length>0){
-      let o=`Codeloader: BlockManager: Code evaluation error${1===E.length?"":"s"}: `;
-      for(const e of E){
-        o+=`\n${e[3]} at (${e[0]}, ${e[1]}, ${e[2]}): ${e[4]} `
+    let E=this.B.E,
+    c=E.length-1;
+    if(c>0){
+      let o="Codeloader: BlockManager: Code evaluation error"+["s",""][+(1===c)]+":",
+      i=1;
+      while(i<=c){
+        let e=E[i];
+        o+="\n"+e[3]+" at ("+e[0]+","+e[1]+","+e[2]+"): "+e[4];
+        i++
       }
       api.broadcastMessage([{
         str:o,
@@ -916,12 +920,12 @@ CL=globalThis.Codeloader={
     if(void 0===x){
       if(EM.a[v]){
         api.broadcastMessage([{
-          str:`Codeloader: InterruptionManager: setInterruptionState - "${v}" interruption status is false.`,
+          str:"Codeloader: InterruptionManager: setInterruptionState - \""+v+"\" interruption status is false.",
           style:OM.g?.w??{}
         }])
       }else{
         api.broadcastMessage([{
-          str:`Codeloader: InterruptionManager: setInterruptionState - "${v}" is invalid active event name.`,
+          str:"Codeloader: InterruptionManager: setInterruptionState - \""+v+"\" is invalid active event name.",
           style:OM.g?.e??{}
         }])
       }

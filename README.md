@@ -78,8 +78,8 @@ onRespawnRequest = (playerId) => { }; // (8,2,2)
 ```
 
 Recommended to use anonymous or arrow function expressions assigned to your event handlers (callbacks), as global variables. Function declarations for your event handlers (callbacks) names may lead sometimes to unexpected behaviour.</br>
-✔️ <code>callbackName = function (...) {...};</code></br>
-✔️ <code>callbackName = (...) => {...};</code></br>
+✔️  <code>callbackName = function (...) {...};</code></br>
+✔️  <code>callbackName = (...) => {...};</code></br>
 ⚠️ <code>function callbackName(...) {...}</code></br>
 
 ---
@@ -339,13 +339,13 @@ If you are worried that hacker can somehow evaluate/execute your code in blocks 
 
 <h3>✦ <em>description</em> ✦</br></h3>
 <code>16000</code> chars — actual <code>World Code</code> capacity.</br>
-<code>13360</code> chars — default loader minified source code.</br>
-<code>14760</code> chars — if you include all possible callback names into <code>ACTIVE_EVENTS</code>.</br></br>
+<code>13450</code> chars — default loader minified source code.</br>
+<code>14850</code> chars — if you include all possible callback names into <code>ACTIVE_EVENTS</code>.</br></br>
 
 Considering the following assumptions:</br>
 • <code>[-100000,-100000,-100000,!0,!0],</code> — average max block entry by chars (33),</br>
 • <code>[10,10,10,!0,!0],</code> — average min block entry by chars (18);</br>
--- we can get <code>16000 - 14760 = 1240</code> chars of free space which should be enough for <code>35–65+</code> blocks inside actual <code>World Code</code>.</br>
+-- we can get <code>16000 - 14850 = 1150</code> chars of free space which should be enough for <code>30–60+</code> blocks inside actual <code>World Code</code>.</br>
 
 <h3>✦ <em>special method</em> ✦</br></h3>
 You can achieve truly UNLIMITED world code by changing <code>Configuration.blocks</code> at runtime, </br>
@@ -463,6 +463,6 @@ Codeloader.serInterruptionState("eventName");
 
 - <code>Interrupted events are never retried.</code></br>
 : 1) Ensure the configuration is correct, the interruption manager is enabled (`interruption_manager.is_enabled = true`).</br>
-  2) Set the corresponding event `interruptionStatus` flag to `true` and include `Codeloader.setInterruptionState(eventName)` inside your handler (callback) function (preferably on top).
+: 2) Set the corresponding event `interruptionStatus` flag to `true` and include `Codeloader.setInterruptionState(eventName)` inside your handler (callback) function (preferably on top).
 
 ---

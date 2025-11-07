@@ -420,7 +420,7 @@ const InterruptionManager = {
       const interruptedRetryTicks = ((eventRetry[3] + eventRetry[4]) / (eventRetry[4] + 1)) | 0; // Math.ceil(limit / (interval + 1))
       if (interruptedRetryTicks > 1) {
         api.broadcastMessage([{
-          str: `Codeloader: InterruptionManager: "${this.eventData[0]}" has been dropped after ${interruptedRetryTicks} consecutive interrupted retry ticks.`,
+          str: "Codeloader: InterruptionManager: \"" + this.eventData[0] + "\" has been dropped after " + interruptedRetryTicks + " consecutive interrupted retry ticks.",
           style: this.boot_manager.logStyle?.error ?? {}
         }]);
       }
@@ -527,10 +527,8 @@ const TickMultiplexer = {
           configurable: true,
           set: (fn) => { delegator.tick = [NOOP, fn][+(typeof fn === "function")]; }
         });
-        delegator.tick = this.main;
-      } else {
-        delegator.tick = this.interruptionTick;
       }
+      delegator.tick = [this.main, this.interruptionTick][+(this.interruption_manager.isActive)];
       this.boot = NOOP;
       this.init = NOOP;
       this.finalized = true;
@@ -702,7 +700,7 @@ const BlockManager = {
       this.blockLockedStatus = {};
       this.chunkLoadState = {};
       this.chunkRequestQueue = [];
-      this.errors = [];
+      this.errors = [null];
       this.hasAnyEvalBlocks = false;
       this.registerCursor = 0;
       this.requestCursor = 0;
@@ -798,6 +796,7 @@ const BlockManager = {
     }
 
     {
+      const caseCache = [null, null];
       const blocks = this.blocks;
       const maxErrorLogs = this.maxErrorLogs;
 
@@ -825,9 +824,10 @@ const BlockManager = {
           const code = api.getBlockData(x, y, z)?.persisted?.shared?.text;
           (0, eval)(code);
         } catch (e) {
-          if (errors.length < maxErrorLogs) {
-            errors[errors.length] = [x, y, z, e.name, e.message];
-          }
+          const count = errors.length - 1;
+          caseCache[0] = errors[count * (count < maxErrorLogs)];
+          caseCache[1] = [x, y, z, e.name, e.message];
+          errors[(count + 1) * (count < maxErrorLogs)] = caseCache[+(count < maxErrorLogs)];
         }
 
         cursorIndex = ++this.evalCursor;
@@ -1008,7 +1008,7 @@ const BootManager = {
     const unregisteredActiveEvents = this.event_manager.unregisteredActiveEvents;
     if (unregisteredActiveEvents.length) {
       api.broadcastMessage([{
-        str: `Codeloader: EventManager: Unregistered callbacks: ${unregisteredActiveEvents.join(", ")}.`,
+        str: "Codeloader: EventManager: Unregistered callbacks: " + unregisteredActiveEvents.join(", ") + ".",
         style: this.logStyle?.warning ?? {}
       }]);
     }
@@ -1022,8 +1022,8 @@ const BootManager = {
 
   logLoadTime(showErrors) {
     const loadTimeMs = this.loadTimeTicks * 50;
-    const errorsCount = this.block_manager.errors.length;
-    const logs = `Codeloader: BootManager: Code was loaded in ${loadTimeMs} ms` + [`.`, ` with ${errorsCount} error${errorsCount === 1 ? "" : "s"}.`][+(showErrors)];
+    const errorsCount = this.block_manager.errors.length - 1;
+    const logs = "Codeloader: BootManager: Code was loaded in " + loadTimeMs + " ms" + [".", " with " + errorsCount + " error" + ["s",""][+(errorsCount === 1)] + "."][+(showErrors)];
     api.broadcastMessage([{
       str: logs,
       style: [this.logStyle?.success, this.logStyle?.warning][+(errorsCount > 0)] ?? {},
@@ -1032,10 +1032,14 @@ const BootManager = {
 
   logErrors() {
     const errors = this.block_manager.errors;
-    if (errors.length > 0) {
-      let logs = `Codeloader: BlockManager: Code evaluation error${errors.length === 1 ? "" : "s"}: `;
-      for (const e of errors) {
-        logs += `\n${e[3]} at (${e[0]}, ${e[1]}, ${e[2]}): ${e[4]} `;
+    let count = errors.length - 1;
+    if (count > 0) {
+      let logs = "Codeloader: BlockManager: Code evaluation error" + ["s",""][+(count === 1)] + ":";
+      let index = 1;
+      while (index <= count) {
+        const e = errors[index];
+        logs += "\n" + e[3] + " at (" + e[0] + "," + e[1] + "," + e[2] + "): " + e[4];
+        index++;
       }
       api.broadcastMessage([{
         str: logs,
@@ -1064,12 +1068,12 @@ const Codeloader = globalThis.Codeloader = {
     if (eventIndex === undefined) {
       if (this.event_manager.isEventActive[eventName]) {
         api.broadcastMessage([{
-          str: `Codeloader: InterruptionManager: setInterruptionState - "${eventName}" interruption status is false.`,
+          str: "Codeloader: InterruptionManager: setInterruptionState - \"" + eventName + "\" interruption status is false.",
           style: this.boot_manager.logStyle?.warning ?? {}
         }]);
       } else {
         api.broadcastMessage([{
-          str: `Codeloader: InterruptionManager: setInterruptionState - "${eventName}" is invalid active event name.`,
+          str: "Codeloader: InterruptionManager: setInterruptionState - \"" + eventName + "\" is invalid active event name.",
           style: this.boot_manager.logStyle?.error ?? {}
         }]);
       }
@@ -1088,7 +1092,7 @@ const Codeloader = globalThis.Codeloader = {
       this.boot_manager.phase = 1;
     } else {
       api.broadcastMessage([{
-        str: `Codeloader: BootManager: Wait until current running boot session is finished.`,
+        str: "Codeloader: BootManager: Wait until current running boot session is finished.",
         style: this.boot_manager.logStyle?.warning ?? {}
       }]);
     }
