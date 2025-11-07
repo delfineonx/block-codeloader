@@ -2,39 +2,39 @@
 // This product includes "Codeloader" created by delfineonx.
 // Licensed under the Apache License, Version 2.0 (the "License").
 
-const CF=Object.seal({
-  ACTIVE_EVENTS:Object.freeze([
+const Configuration={
+  ACTIVE_EVENTS:[
     /* ... */
-  ]),
+  ],
   blocks:[
     /* ... */
   ],
-  boot_manager:Object.seal({
+  boot_manager:{
     boot_delay_ms:200,
     show_load_time:true,
     show_errors:true,
-  }),
-  block_manager:Object.seal({
+  },
+  block_manager:{
     default_locked_status:true,
     default_eval_status:true,
     max_registrations_per_tick:32,
     max_requests_per_tick:8,
     max_evals_per_tick:16,
     max_error_logs:32,
-  }),
-  join_manager:Object.seal({
+  },
+  join_manager:{
     reset_on_reboot:true,
     max_dequeue_per_tick:8,
-  }),
-  interruption_manager:Object.seal({
+  },
+  interruption_manager:{
     is_enabled:false,
-    max_dequeue_per_tick:16,
+    max_dequeue_per_tick:32,
     default_retry_delay_ms:0,
-    default_retry_limit_ms:50,
-    default_retry_interval_ms:0,
-    default_retry_cooldown_ms:500,
-  }),
-  EVENT_REGISTRY:Object.seal({
+    default_retry_limit_ms:150,
+    default_retry_interval_ms:50,
+    default_retry_cooldown_ms:300,
+  },
+  EVENT_REGISTRY:{
     tick:null,
     onClose:[!0],
     onPlayerJoin:[!0],
@@ -96,15 +96,16 @@ const CF=Object.seal({
     onPlayerStartChargingItem:[!0],
     onPlayerFinishChargingItem:[!0],
     doPeriodicSave:[!0],
-  }),
-  LOG_STYLE:Object.seal({
+  },
+  LOG_STYLE:{
     error:{color:"#ff9d87",fontWeight:"600",fontSize:"1rem"},
     warning:{color:"#fcd373",fontWeight:"600",fontSize:"1rem"},
     success:{color:"#2eeb82",fontWeight:"600",fontSize:"1rem"},
-  })
-});
+  }
+};
 
-const EM={
+const CF=Configuration,
+EM={
   I:null,
   N:null,
   d:null,
@@ -120,43 +121,46 @@ const EM={
   s_(){
     let S=this;
     if(!S.P){
-      let l=!!CF.interruption_manager.is_enabled,
-      R=CF.EVENT_REGISTRY,
+      let I=S.I,
+      l=!!CF.interruption_manager.is_enabled,
+      R=I.R=CF.EVENT_REGISTRY,
       V=CF.ACTIVE_EVENTS,
       N=S.N=function(){},
       d=S.d,
       A=S.A=[],
       a=S.a={},
       u=S.u=[],
-      I=S.I;
-      I.N={};
-      let X=I.I={},
-      D=I.D=[];
+      p=I.d,
+      O=I.N={},
+      X=I.I={},
+      D=p.D=I.D=[];
       I.U=new Int32Array(4);
-      let Y=I.Y=[],
-      q=I.q=new Uint32Array(2),
-      i=I.i=new Uint32Array(2),
+      let Y=p.Y=I.Y=[],
+      q=p.q=I.q=new Uint32Array(2),
+      i=p.i=I.i=new Uint32Array(2),
+      _=[null,null],
       x=0;
       for(let v of V){
-        if(!Object.hasOwn(R,v)){
+        let e=R[v];
+        if(void 0===e){
           u[u.length]=v;
           continue
         }
         A[A.length]=v;
         a[v]=!0;
         if("tick"!==v) {
-          if(!Array.isArray(R[v])){
-            R[v]=[]
-          }
-          let s=R[v][0]=!!R[v][0];
-          if(l&&s){
+          _[0]=[];
+          _[1]=e;
+          e=R[v]=_[+(Array.isArray(e))];
+          let s=e[0]=!!e[0];
+          if(l&s){
             I.a=!0;
             let c=x;
             X[v]=c;
             Y[c]=new Int32Array(6);
             let n=D[c]=[v,-1,new Array(9)],
             g=n[2];
-            d[v]=I.N[v]=function(){I.i_(c)};
+            d[v]=O[v]=function(){I.setInterruptionState(v)};
             globalThis[v]=function(a0,a1,a2,a3,a4,a5,a6,a7,a8){
               q[c>>5]|=(1<<(c&31));
               i[c>>5]|=(1<<(c&31));
@@ -181,24 +185,25 @@ const EM={
           }
         }
       }
-      S.P=!0
     }
   },
   i_(){
     let S=this;
     if(!S.T){
-      let n=S.I.N,
-      N=S.N,
+      let _=[null,null],
+      n=S.I.N,
       d=S.d,
       A=S.A,
       l=A.length,
       c=S.t;
+      _[1]=S.N;
       while(c<l){
-        let v=A[c],
-        O=n[v]??N;
+        let v=A[c];
+        _[0]=n[v];
+        let O=_[+(void 0===_[0])];
         Object.defineProperty(globalThis,v,{
           configurable:!0,
-          set:F=>{d[v]="function"===typeof F?F:O}
+          set:F=>{d[v]=[O,F][+("function"===typeof F)]}
         });
         c=++S.t
       }
@@ -214,16 +219,18 @@ const EM={
   },
   r_(){
     let S=this,
+    _=[null,null],
     n=S.I.N,
-    N=S.N,
     d=S.d,
     A=S.A,
     l=A.length,
     c=S.r;
+    _[1]=S.N;
     while(c<l){
       let v=A[c];
       if("tick"!==v){
-        d[v]=n[v]??N
+        _[0]=n[v];
+        d[v]=_[+(void 0===_[0])]
       }
       c=++S.r
     }
@@ -231,8 +238,6 @@ const EM={
   }
 },
 IM={
-  E:null,
-  B:null,
   N:null,
   I:null,
   D:null,
@@ -246,37 +251,19 @@ IM={
   s:0,
   a:!1,
   e:!1,
-  t:{
-    C:0,
-    T:1,
-    D:2,
-    L:3,
-    I:4,
-    W:5,
-    R:-1,
-    Y:-2
-  },
-  d:{
-    N:0,
-    T:1,
-    A:2
-  },
   e_(){
     let S=this;
     if(!S.e){
-      S.R=CF.EVENT_REGISTRY;
       let C=CF.interruption_manager,
       U=S.U,
-      t=S.t,
-      O=t.Y,
       d=((0|C.default_retry_delay_ms)*.02)|0;
-      U[t.D+O]=d&~(d>>31);
+      U[0]=d&~(d>>31);
       let l=((0|C.default_retry_limit_ms)*.02)|0;
-      U[t.L+O]=l&~(l>>31);
+      U[1]=l&~(l>>31);
       let i=((0|C.default_retry_interval_ms)*.02)|0;
-      U[t.I+O]=i&~(i>>31);
+      U[2]=i&~(i>>31);
       let w=((0|C.default_retry_cooldown_ms)*.02)|0;
-      U[t.W+O]=(w&~(w>>31))+(-w>>31)+1;
+      U[3]=(w&~(w>>31))+(-w>>31)+1;
       let Q=0|C.max_dequeue_per_tick;
       S.Q=(Q&~(Q>>31))+(-Q>>31)+1;
       S.n=0;
@@ -290,134 +277,130 @@ IM={
   },
   s_(){
     let S=this,
+    _=[null,null],
     D=S.D,
     R=S.R,
     U=S.U,
     Y=S.Y,
-    t=S.t,
-    E=t.C,
-    V=t.T,
-    F=t.D,
-    M=t.L,
-    J=t.I,
-    X=t.W,
-    T=t.R,
-    Z=t.Y,
-    N=S.d.N,
     l=Y.length,
     c=S.s;
     while(c<l){
-      let v=D[c][N],
+      let v=D[c][0],
       r=R[v],
       y=Y[c];
-      y[E]=0;
-      y[V]=0;
-      let f=r[F+T];
-      if(void 0===f||null===f){
-        y[F]=U[F+Z]
-      }else{
-        let d=((0|f)*.02)|0;
-        y[F]=d&~(d>>31)
-      }
-      let m=r[M+T];
-      if(void 0===m||null===m){
-        y[M]=U[M+Z]
-      }else{
-        let l=((0|m)*.02)|0;
-        y[M]=l&~(l>>31)
-      }
-      let j=r[J+T];
-      if(void 0===j||null===j){
-        y[J]=U[J+Z]
-      }else{
-        let i=((0|j)*.02)|0;
-        y[J]=i&~(i>>31)
-      }
-      let x=r[X+T];
-      if(void 0===x||null===x){
-        y[X]=U[X+Z]
-      }else{
-        let w=((0|x)*.02)|0;
-        y[X]=(w&~(w>>31))+(-w>>31)+1
-      }
+      y[0]=0;
+      y[1]=0;
+      let e=r[1],
+      d=((0|e)*.02)|0;
+      _[0]=d&~(d>>31);
+      _[1]=U[0];
+      y[2]=_[void 0===e|null===e];
+      let n=r[2],
+      m=((0|n)*.02)|0;
+      _[0]=m&~(m>>31);
+      _[1]=U[1];
+      y[3]=_[void 0===n|null===n];
+      let j=r[3],
+      i=((0|j)*.02)|0;
+      _[0]=i&~(i>>31);
+      _[1]=U[2];
+      y[4]=_[void 0===j|null===j];
+      let x=r[4],
+      w=((0|x)*.02)|0;
+      _[0]=(w&~(w>>31))+(-w>>31)+1;
+      _[1]=U[3];
+      y[5]=_[void 0===x|null===x];
       c=++S.s
     }
     return c>=l
   },
-  i_(x){
+  setInterruptionState(v){
+    let x=this.I[v];
     this.q[x>>5]&=~(1<<(31&x));
     this.i[x>>5]&=~(1<<(31&x))
   },
-  q_(){
-    let S=this,
-    q=S.q;
-    if(!q[0]&&!q[1]){
-      return
-    }
-    let D=S.D,
-    n=S.n,
-    Y=S.Y,
-    i=S.i,
-    t=S.t,
-    E=t.C,
-    U=t.T,
-    F=t.D,
-    M=t.L,
-    J=t.I,
-    X=t.W,
-    d=S.d,
-    N=d.N,
-    T=d.T,
-    A=d.A,
-    u=S.Q,
-    w=0;
-    while(w<2){
-      i[w]|=q[w];
-      while(i[w]&&u>0){
-        let b=i[w]&-i[w],
-        x=(w<<5)|(31-Math.clz32(b)),
-        d=D[x],
-        y=Y[x];
-        if(n-d[T]<=y[F]){
-          i[w]&=~b;
-          continue
-        }
-        if(y[U]>=n){
-          q[w]&=~b;
-          i[w]&=~b;
-          continue
-        }
-        if(y[E]>=y[M]){
-          let r=((y[M]+y[J])/(y[J]+1))|0;
-          if(r>1){
-            api.broadcastMessage([{
-              str:`Codeloader: InterruptionManager: "${d[N]}" has been dropped after ${r} consecutive interrupted retry ticks.`,
-              style:S.B.g?.e??{}
-            }])
-          }
-          let a=d[A];
-          a[0]=a[1]=a[2]=a[3]=a[4]=a[5]=a[6]=a[7]=a[8]=void 0;
-          y[E]=0;
-          y[U]=n+y[X];
-          q[w]&=~b;
-          i[w]&=~b;
-          continue
-        }
-        if(!(y[E]%(y[J]+1))){
-          y[E]++;
-          let a=d[A];
-          if(a){
-            S.E.d[d[N]].apply(null,a);
-            a[0]=a[1]=a[2]=a[3]=a[4]=a[5]=a[6]=a[7]=a[8]=void 0
-          }
-          y[E]=0;
-          u--;
-          continue
-        }
-        y[E]++;
-        i[w]&=~b
+  d:{
+    E:null,
+    B:null,
+    D:null,
+    Y:null,
+    q:null,
+    i:null,
+    n:0,
+    u:0,
+    w:0,
+    b:0,
+    d:null,
+    y:null,
+    get 1(){
+      let s=this;
+      s.b=s.i[s.w]&-s.i[s.w];
+      let x=(s.w<<5)|(31-Math.clz32(s.b));
+      s.d=s.D[x];
+      let y=s.y=s.Y[x],
+      _=1;
+      _^=s[_*(s.n-s.d[1]<=y[2])*2];
+      _^=s[_*(y[1]>=s.n)*3];
+      _^=s[_*(y[0]>=y[3])*4];
+      _^=s[_*(!(y[0]%(y[4]+1)))*5];
+      s[_*6];
+      s[(!!s.i[s.w])&(s.u>0)]
+    },
+    get 2(){
+      this.i[this.w]&=~this.b;
+      return 1
+    },
+    get 3(){
+      this.q[this.w]&=~this.b;
+      this.i[this.w]&=~this.b;
+      return 1
+    },
+    get 4(){
+      let s=this,
+      y=s.y,
+      r=((y[3]+y[4])/(y[4]+1))|0;
+      if(r>1){
+        api.broadcastMessage([{
+          str:`Codeloader: InterruptionManager: "${s.d[0]}" has been dropped after ${r} consecutive interrupted retry ticks.`,
+          style:s.B.g?.e??{}
+        }])
       }
-      w++
+      let a=s.d[2];
+      a[0]=a[1]=a[2]=a[3]=a[4]=a[5]=a[6]=a[7]=a[8]=void 0;
+      y[0]=0;
+      y[1]=s.n+y[5]
+      s.q[s.w]&=~s.b;
+      s.i[s.w]&=~s.b;
+      return 1
+    },
+    get 5(){
+      let s=this;
+      s.y[0]++;
+      let a=s.d[2];
+      s.E.d[s.d[0]].apply(null,a);
+      a[0]=a[1]=a[2]=a[3]=a[4]=a[5]=a[6]=a[7]=a[8]=void 0;
+      s.y[0]=0;
+      s.u--;
+      return 1
+    },
+    get 6(){
+      this.y[0]++;
+      this.i[this.w]&=~this.b;
+      return 1
+    }
+  },
+  q_(){
+    let s=this;
+    if(s.q[0]|s.q[1]){
+      let d=s.d;
+      d.n=s.n;
+      d.u=s.Q;
+      let w=d.w=0;
+      while(w<2){
+        s.i[w]|=s.q[w];
+        d[(!!s.i[w])&(d.u>0)];
+        w=++d.w
+      }
     }
   }
 },
@@ -460,7 +443,7 @@ TM={
       d=S.E.d;
       Object.defineProperty(globalThis,"tick",{
         configurable:!0,
-        set:F=>{S.m="function"===typeof F?F:N}
+        set:F=>{S.m=[N,F][+("function"===typeof F)]}
       });
       S.b=d.tick;
       d.tick=S.d_;
@@ -475,7 +458,7 @@ TM={
       if(!S.I.a){
         Object.defineProperty(globalThis,"tick",{
           configurable:!0,
-          set:F=>{d.tick="function"===typeof F?F:N}
+          set:F=>{d.tick=[N,F][+("function"===typeof F)]}
         }),
         d.tick=S.m
       }else{
@@ -514,9 +497,7 @@ JM={
       S.q=(q&~(q>>31))+(-q>>31)+1;
       S.m=S.E.N;
       S.b=[];
-      if(S.r||!S.j){
-        S.j={}
-      }
+      S.j=[S.j,{}][S.r|!S.j];
       S.d=0;
       S.t=!1;
       S.f=!1;
@@ -525,7 +506,7 @@ JM={
   },
   s_(){
     let S=this;
-    if(S.r||S.B.P){
+    if(S.r|S.B.P){
       let l=api.getPlayerIds(),
       b=S.b,
       j=S.j,
@@ -548,10 +529,11 @@ JM={
     let S=this;
     if(!S.t){
       S.E.d.onPlayerJoin=S.d_;
-      let N=S.I.N.onPlayerJoin??this.E.N;
+      let n=S.I.N.onPlayerJoin,
+      N=[n,S.E.N][+(void 0===n)];
       Object.defineProperty(globalThis,"onPlayerJoin",{
         configurable:!0,
-        set:F=>{S.m="function"==typeof F?F:N}
+        set:F=>{S.m=[N,F][+("function"===typeof F)]}
       });
       S.t=!0
     }
@@ -564,12 +546,11 @@ JM={
     P=S.J.P,
     u=S.q,
     c=S.d;
-    while(c<b.length&&u>0){
+    while((c<b.length)&(u>0)){
       let a=b[c],
-      p=a[0],
-      r=a[1];
+      p=a[0];
       if(j[p]!==P){
-        m(p,r);
+        m(p,a[1]);
         j[p]=P;
         u--
       }
@@ -580,12 +561,13 @@ JM={
   f_(){
     let S=this;
     if(!S.f){
-      let N=S.I.N.onPlayerJoin??S.E.N,
+      let n=S.I.N.onPlayerJoin,
+      N=[n,S.E.N][+(void 0===n)],
       d=S.E.d;
       d.onPlayerJoin=S.m;
       Object.defineProperty(globalThis,"onPlayerJoin",{
         configurable:!0,
-        set:F=>{d.onPlayerJoin="function"==typeof F?F:N}
+        set:F=>{d.onPlayerJoin=[N,F][+("function"===typeof F)]}
       });
       S.f=!0
     }
@@ -615,7 +597,6 @@ BM={
     R:1,
     D:2
   },
-  F:(0,eval),
   e_(){
     let S=this;
     if(!S.e){
@@ -631,7 +612,7 @@ BM={
       S.V=(V&~(V>>31))+(-V>>31)+1;
       let O=0|C.max_error_logs;
       S.O=O&~(O>>31);
-      S.h=0;
+      S.h=1;
       S.K={};
       S.L={};
       S.Q=[];
@@ -644,11 +625,11 @@ BM={
     }
   },
   m_(){
-    if(0===BM.h){return BM.r_()}
-    if(1===BM.h){BM.i_()}
+    BM[BM.h]
   },
-  r_(){
+  get 1(){
     let S=this,
+    _=[null, null],
     b=S.b,
     k=S.k,
     v=S.v,
@@ -658,14 +639,18 @@ BM={
     n=b.length,
     u=S.G,
     c=S.g;
-    while(c<n&&u>0){
+    while((c<n)&(u>0)){
       let B=b[c]=b[c].slice(),
       x=B[0]=(B[0]|0)-((B[0]<(B[0]|0))&1),
       y=B[1]=(B[1]|0)-((B[1]<(B[1]|0))&1),
       z=B[2]=(B[2]|0)-((B[2]<(B[2]|0))&1),
       i=x+"|"+y+"|"+z;
-      (void 0===B[3]||null===B[3])?K[i]=B[3]=k:K[i]=B[3]=!!B[3];
-      let V=(void 0===B[4]||null===B[4])?B[4]=v:B[4]=!!B[4];
+      _[0]=!!B[3];
+      _[1]=k;
+      K[i]=B[3]=_[(void 0===B[3])|(null===B[3])];
+      _[0]=!!B[4];
+      _[1]=v;
+      let V=B[4]=_[(void 0===B[4])|(null===B[4])];
       if(V){
         let l=api.isBlockInLoadedChunk(x,y,z),
         i=(x>>5)+"|"+(y>>5)+"|"+(z>>5);
@@ -680,11 +665,9 @@ BM={
       u--;
       c=++S.g
     }
-    if(c>=n){
-      S.h=!(S.N)+1
-    }
+    S.h=1+(c>=n)*(!(S.N)+1)
   },
-  i_(){
+  get 2(){
     let S=this,
     L=S.L,
     R=S.T.R,
@@ -694,15 +677,10 @@ BM={
       n=Q.length,
       u=S.R,
       c=S.r;
-      while(c<n&&u>0){
+      while((c<n)&(u>0)){
         let e=Q[c],
         i=e[0];
-        if(L[i]===R){
-          if(api.isBlockInLoadedChunk(e[1],e[2],e[3])){
-            L[i]=D;
-            c===S.r&&S.r++
-          }
-        }else if(1===api.getBlockId(e[1],e[2],e[3])){
+        if(1===api.getBlockId(e[1],e[2],e[3])){
           L[i]=R
         }else{
           L[i]=D;
@@ -716,11 +694,10 @@ BM={
       let b=S.b,
       O=S.O,
       E=S.E,
-      F=S.F,
       n=b.length,
       u=S.V,
       c=S.a;
-      while(c<n&&u>0){
+      while((c<n)&(u>0)){
         let B=b[c];
         if(!B[4]){
           c=++S.a;
@@ -735,7 +712,7 @@ BM={
         }
         try{
           let C=api.getBlockData(x,y,z)?.persisted?.shared?.text;
-          F(C)
+          (0,eval)(C)
         }catch(e){
           if(E.length<O){
             E[E.length]=[x,y,z,e.name,e.message]
@@ -745,16 +722,15 @@ BM={
         u--
       }
     }
-    if(S.a>=S.b.length){
-      S.h=2
-    }
+    S.h=2+(S.a>=S.b.length)
   },
-  k_(p) {
+  isBlockLocked(p){
     let x=(p[0]|0)-((p[0]<(p[0]|0))&1),
     y=(p[1]|0)-((p[1]<(p[1]|0))&1),
     z=(p[2]|0)-((p[2]<(p[2]|0))&1),
-    i=x+"|"+y+"|"+z;
-    return!this.B.R&&!!(this.K[i]??!0)
+    i=x+"|"+y+"|"+z,
+    k=this.K[i];
+    return!!(!this.B.R&[!!k,!0][+(void 0===k)])
   }
 },
 OM={
@@ -772,57 +748,26 @@ OM={
   t:-1,
   P:!0,
   R:!1,
-  tick(){
-    let S=OM;
-    S.n++;
-    if(-1===S.h){
-      return S.u_()
-    }
-    if(0===S.h){
-      S.b_()
-    }
-    if(1===S.h){
-      S.d_()
-    }
-    if(2===S.h){
-      return S.e_()
-    }
-    if(3===S.h){
-      S.p_()
-    }
-    if(4===S.h){
-      S.s_()
-    }
-    if(5===S.h){
-      return S.i_()
-    }
-    if(6===S.h){
-      S.n_()
-    }
-    if(7===S.h){
-      S.q_()
-    }
-    if(8===S.h){
-      S.t_()
-    }
-    if(9===S.h){
-      S.f_()
-    }
+  tick() {
+    OM.n++;
+    OM[OM.h]
   },
-  u_(){
+  get 12(){
     let S=this;
     if(S.P){
-      if(!S.E.P&&S.n>=10){
+      if((!S.E.P)&(S.n>=10)){
         let e=S.E.E,
         o=`Codeloader: EventManager: ${(null===e)?"Undefined e":"E"}rror on events primary setup${(null===e)?".":` - ${e[0]}: ${e[1]}.`}`,
         l=api.getPlayerIds();
         for(let p of l){
-          api.kickPlayer(p,o)
+          if(api.playerIsInGame(p)){
+            api.kickPlayer(p,o)
+          }
         }
       }
     }
   },
-  b_(){
+  get 1(){
     let S=this;
     if(!S.R){
       S.n=0;
@@ -843,34 +788,37 @@ OM={
       S.J.e=!1;
       S.B.e=!1;
       S.R=!0;
-      S.h=1
+      S.h=2;
+      S[S.h]
     }
   },
-  d_(){
-    if(this.n>=this.d){
-      this.h=2
-    }
+  get 2(){
+    let S=this;
+    S.h=2+(S.n>=S.d);
+    S[S.h*(S.n>=S.d)]
   },
-  e_(){
+  get 3(){
     let S=this;
     S.E.e_();
     S.I.e_();
     S.T.e_();
     S.J.e_();
     S.B.e_();
-    S.h=3
+    S.h=4
   },
   
-  p_(){
-    let c=1;
-    if(this.P){
-      c&=this.E.i_()
+  get 4(){
+    let S=this,
+    c=1;
+    if(S.P){
+      c&=S.E.i_()
     }
-    if(c&&this.E.r_()){
-      this.h=4
+    if(c&&S.E.r_()){
+      S.h=5;
+      S[S.h]
     }
   },
-  s_(){
+  get 5(){
     let S=this,
     c=1;
     if(S.I.a){
@@ -879,36 +827,33 @@ OM={
     if(S.E.a.onPlayerJoin){
       c&=S.J.s_()
     }
-    if(c){
-      S.h=5
-    }
+    S.h=5+c;
+    S[S.h*c]
   },
-  i_(){
+  get 6(){
     if(this.E.a.onPlayerJoin){
       this.J.i_()
     }
-    this.T.i_()
-    this.h=6
-  },
-  n_(){
-    this.T.i=this.B.m_;
+    this.T.i_();
     this.h=7
   },
-  q_(){
-    if(2===this.B.h){
-      if (this.E.a.onPlayerJoin&&this.J.t){
-        this.h=8
-      }else{
-        this.h=9
-      }
+  get 7(){
+    this.T.i=this.B.m_;
+    this.h=8
+  },
+  get 8(){
+    if(3===this.B.h){
+      this.h=8+(1+!this.E.a.onPlayerJoin);
+      this[this.h]
     }
   },
-  t_(){
+  get 9(){
     if(this.J.q_()){
-      this.h=9
+      this.h=10;
+      this[this.h]
     }
   },
-  f_(){
+  get 10(){
     let S=this;
     if (S.E.a.onPlayerJoin){
       S.J.f_()
@@ -919,9 +864,9 @@ OM={
     S.R=!1;
     S.h=-1;
     S.t=S.n-S.d+1;
-    S.R_(S.l,S.e)
+    S.r_(S.l,S.e)
   },
-  R_(l,e){
+  r_(l,e){
     let u=this.E.u;
     if(u.length){
       api.broadcastMessage([{
@@ -929,20 +874,19 @@ OM={
         style:this.g?.w??{}
       }])
     }
-    l&&this.T_(e);
-    e&&this.E_()
+    l&&this.l_(e);
+    e&&this.e_()
   },
-  T_(e){
+  l_(e){
     let t=50*this.t,
     c=this.B.E.length,
-    o=`Codeloader: BootManager: Code was loaded in ${t} ms`;
-    e?o+=` with ${c} error${1===c?"":"s"}.`:o+=".";
+    o=`Codeloader: BootManager: Code was loaded in ${t} ms` + [`.`, ` with ${c} error${c === 1 ? "" : "s"}.`][+(e)];
     api.broadcastMessage([{
       str:o,
-      style:(c>0?this.g?.w:this.g?.s)??{}
+      style:[this.g?.s,this.g?.w][+(c>0)]??{}
     }])
   },
-  E_(){
+  e_(){
     let E=this.B.E;
     if(E.length>0){
       let o=`Codeloader: BlockManager: Code evaluation error${1===E.length?"":"s"}: `;
@@ -955,16 +899,17 @@ OM={
       }])
     }
   }
-};
-globalThis.Codeloader=Object.freeze({
-  get configuration(){
-    return CF
-  },
+},
+CL=globalThis.Codeloader={
+  event_manager:null,
+  interruption_manager:null,
+  tick_multiplexer:null,
+  join_manager:null,
+  block_manager:null,
+  boot_manager:null,
+  configuration: null,
   get isRunning(){
     return OM.R
-  },
-  get errors(){
-    return BM.E.slice()
   },
   setInterruptionState(v){
     let x=IM.I[v];
@@ -982,15 +927,15 @@ globalThis.Codeloader=Object.freeze({
       }
       return
     }
-    IM.i_(x)
+    IM.setInterruptionState(v)
   },
   isBlockLocked(p){
-    return !Array.isArray(p)||3!==p.length||BM.k_(p)
+    return !Array.isArray(p)||3!==p.length||BM.isBlockLocked(p)
   },
   reboot(){
     if(!OM.R){
       EM.d.tick=OM.tick;
-      OM.h=0
+      OM.h=1
     }else{
       api.broadcastMessage([{
         str:"Codeloader: BootManager: Wait until current running boot session is finished.",
@@ -999,18 +944,18 @@ globalThis.Codeloader=Object.freeze({
     }
   },
   logBootResult(l=!0,e=!0){
-    OM.R_(l,e)
+    OM.r_(l,e)
   },
   logLoadTime(e=!0){
-    OM.T_(e)
+    OM.l_(e)
   },
   logErrors(){
-    OM.E_()
+    OM.e_()
   }
-});
+};
 EM.I=IM;
-IM.E=EM;
-IM.B=OM;
+IM.d.E=EM;
+IM.d.B=OM;
 TM.E=EM;
 TM.I=IM;
 TM.B=OM;
@@ -1023,12 +968,19 @@ OM.I=IM;
 OM.T=TM;
 OM.J=JM;
 OM.B=BM;
+CL.configuration=CF;
+CL.event_manager=EM;
+CL.interruption_manager=IM;
+CL.tick_multiplexer=TM;
+CL.join_manager=JM;
+CL.block_manager=BM;
+CL.boot_manager=OM;
 {
   let d=EM.d={};
   EM.t=0;
   EM.P=!1;
   EM.T=!1;
-  OM.h=-1;
+  OM.h=12;
   OM.P=!0;
   OM.R=!1;
   OM.n=0;
@@ -1039,8 +991,33 @@ OM.B=BM;
 }
 try{
   EM.s_();
-  OM.h=0
+  [
+    CF,
+    CF.boot_manager,
+    CF.block_manager,
+    CF.join_manager,
+    CF.interruption_manager,
+    CF.LOG_STYLE,
+    EM,
+    IM,
+    TM,
+    JM,
+    BM,
+    OM
+  ].forEach(o=>{
+    Object.seal(o)
+  });
+  [
+    CF.ACTIVE_EVENTS,
+    CF.EVENT_REGISTRY,
+    CL
+  ].forEach(o=>{
+    Object.freeze(o)
+  });
+  EM.P=!0;
+  OM.h=1
 }catch(e){
   EM.E=[e.name,e.message]
 }
 void 0;
+

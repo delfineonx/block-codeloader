@@ -2,12 +2,12 @@
 // This product includes "Codeloader" created by delfineonx.
 // Licensed under the Apache License, Version 2.0 (the "License").
 
-const Configuration = Object.seal({
+const Configuration = {
   // [eventName, ...]
   // [string, ...]
-  ACTIVE_EVENTS: Object.freeze([
+  ACTIVE_EVENTS: [
     // ...
-  ]),
+  ],
 
   // [[x, y, z, lockedStatus?, evalStatus?], ...]
   // [[number, number, number, boolean|null, boolean|null], ...]
@@ -15,36 +15,36 @@ const Configuration = Object.seal({
     // ...
   ],
 
-  boot_manager: Object.seal({
+  boot_manager: {
     boot_delay_ms: 200,
     show_load_time: true,
     show_errors: true,
-  }),
-  block_manager: Object.seal({
+  },
+  block_manager: {
     default_locked_status: true,
     default_eval_status: true,
     max_registrations_per_tick: 32,
     max_requests_per_tick: 8,
     max_evals_per_tick: 16,
     max_error_logs: 32,
-  }),
-  join_manager: Object.seal({
+  },
+  join_manager: {
     reset_on_reboot: true,
     max_dequeue_per_tick: 8,
-  }),
-  interruption_manager: Object.seal({
+  },
+  interruption_manager: {
     is_enabled: false,
-    max_dequeue_per_tick: 16,
+    max_dequeue_per_tick: 32,
     default_retry_delay_ms: 0,
-    default_retry_limit_ms: 50,
-    default_retry_interval_ms: 0,
-    default_retry_cooldown_ms: 500,
-  }),
+    default_retry_limit_ms: 150,
+    default_retry_interval_ms: 50,
+    default_retry_cooldown_ms: 300,
+  },
 
   // if event has special return value, then `interruptionStatus = false` setup is recommended
   // eventName -> [interruptionStatus?, delayMs?, limitMs?, intervalMs?, cooldownMs?]
   // string -> [boolean|null, number|null, number|null, number|null, number|null]
-  EVENT_REGISTRY: Object.seal({
+  EVENT_REGISTRY: {
     "tick": null, // special event
     "onClose": [true],
     "onPlayerJoin": [true],
@@ -106,9 +106,9 @@ const Configuration = Object.seal({
     "onPlayerStartChargingItem": [true],
     "onPlayerFinishChargingItem": [true],
     "doPeriodicSave": [true],
-  }),
+  },
 
-  LOG_STYLE: Object.seal({
+  LOG_STYLE: {
     error: {
       color: "#ff9d87",
       fontWeight: "600",
@@ -124,8 +124,8 @@ const Configuration = Object.seal({
       fontWeight: "600",
       fontSize: "1rem"
     },
-  }),
-});
+  },
+};
 
 const EventManager = {
   interruption_manager: null,
@@ -136,18 +136,19 @@ const EventManager = {
   isEventActive: null, // eventName -> true
   unregisteredActiveEvents: null, // [eventName, ...]
   primarySetupError: null, // [error.name, error.message]
-  
+
   primaryInstallCursor: 0,
   resetCursor: 0,
-  
+
   isPrimarySetupDone: false,
   isPrimaryInstallDone: false,
   established: false,
 
   primarySetup() {
     if (!this.isPrimarySetupDone) {
+      const interruption_manager = this.interruption_manager;
       const isInterruptionManagerEnabled = !!Configuration.interruption_manager.is_enabled;
-      const primaryEventRegistry = Configuration.EVENT_REGISTRY;
+      const primaryEventRegistry = interruption_manager.eventRegistry = Configuration.EVENT_REGISTRY;
       const primaryActiveEvents = Configuration.ACTIVE_EVENTS;
 
       const NOOP = this.NOOP = function () { };
@@ -156,36 +157,38 @@ const EventManager = {
       const isEventActive = this.isEventActive = {};
       const unregisteredActiveEvents = this.unregisteredActiveEvents = [];
 
-      const interruption_manager = this.interruption_manager;
-      interruption_manager.NOOP = {};
+      const interruption_dispatcher = interruption_manager.dispatcher;
+      const interruptionNOOP = interruption_manager.NOOP = {};
       const eventIndexByName = interruption_manager.eventIndexByName = {};
-      const eventDataByIndex = interruption_manager.eventDataByIndex = [];
+      const eventDataByIndex = interruption_dispatcher.eventDataByIndex = interruption_manager.eventDataByIndex = [];
       interruption_manager.defaultRetryTicks = new Int32Array(4);
-      const eventRetryTicksByIndex = interruption_manager.eventRetryTicksByIndex = [];
-      const dequeueStateMask = interruption_manager.dequeueStateMask = new Uint32Array(2);
-      const iterationStateMask = interruption_manager.iterationStateMask = new Uint32Array(2);
+      const eventRetryTicksByIndex = interruption_dispatcher.eventRetryTicksByIndex = interruption_manager.eventRetryTicksByIndex = [];
+      const dequeueStateMask = interruption_dispatcher.dequeueStateMask = interruption_manager.dequeueStateMask = new Uint32Array(2);
+      const iterationStateMask = interruption_dispatcher.iterationStateMask = interruption_manager.iterationStateMask = new Uint32Array(2);
 
+      const caseCache = [null, null];
       let interruptionEventIndex = 0;
       for (const eventName of primaryActiveEvents) {
-        if (!Object.hasOwn(primaryEventRegistry, eventName)) {
+        let registryEntry = primaryEventRegistry[eventName];
+        if (registryEntry === undefined) {
           unregisteredActiveEvents[unregisteredActiveEvents.length] = eventName;
           continue;
         }
         activeEvents[activeEvents.length] = eventName;
         isEventActive[eventName] = true;
         if (eventName !== "tick") {
-          if (!Array.isArray(primaryEventRegistry[eventName])) {
-            primaryEventRegistry[eventName] = [];
-          }
-          const interruptionStatus = primaryEventRegistry[eventName][0] = !!primaryEventRegistry[eventName][0];
-          if (isInterruptionManagerEnabled && interruptionStatus) {
+          caseCache[0] = [];
+          caseCache[1] = registryEntry;
+          registryEntry = primaryEventRegistry[eventName] = caseCache[+(Array.isArray(registryEntry))]
+          const interruptionStatus = registryEntry[0] = !!registryEntry[0];
+          if (isInterruptionManagerEnabled & interruptionStatus) {
             interruption_manager.isActive = true;
             const eventIndex = interruptionEventIndex;
             eventIndexByName[eventName] = eventIndex;
             eventRetryTicksByIndex[eventIndex] = new Int32Array(6);
             const eventData = eventDataByIndex[eventIndex] = [eventName, -1, new Array(9)];
             const args = eventData[2];
-            delegator[eventName] = interruption_manager.NOOP[eventName] = function () { interruption_manager.setInterruptionState(eventIndex); };
+            delegator[eventName] = interruptionNOOP[eventName] = function () { interruption_manager.setInterruptionState(eventName); };
             globalThis[eventName] = function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
               dequeueStateMask[eventIndex >> 5] |= (1 << (eventIndex & 31));
               iterationStateMask[eventIndex >> 5] |= (1 << (eventIndex & 31));
@@ -210,15 +213,16 @@ const EventManager = {
           }
         }
       }
-      this.isPrimarySetupDone = true;
     }
   },
 
   primaryInstall() {
     if (!this.isPrimaryInstallDone) {
+      const caseCache = [null, null];
+
       const interruptionNOOP = this.interruption_manager.NOOP;
 
-      const NOOP = this.NOOP;
+      caseCache[1] = this.NOOP;
       const delegator = this.delegator;
       const activeEvents = this.activeEvents;
 
@@ -226,10 +230,11 @@ const EventManager = {
       let cursorIndex = this.primaryInstallCursor;
       while (cursorIndex < len) {
         const eventName = activeEvents[cursorIndex];
-        const _NOOP = interruptionNOOP[eventName] ?? NOOP;
+        caseCache[0] = interruptionNOOP[eventName];
+        const NOOP = caseCache[+(caseCache[0] === undefined)];
         Object.defineProperty(globalThis, eventName, {
           configurable: true,
-          set: (fn) => { delegator[eventName] = (typeof fn === "function") ? fn : _NOOP; }
+          set: (fn) => { delegator[eventName] = [NOOP, fn][+(typeof fn === "function")]; }
         });
         cursorIndex = ++this.primaryInstallCursor;
       }
@@ -246,9 +251,11 @@ const EventManager = {
   },
 
   resetHandlers() {
+    const caseCache = [null, null];
+
     const interruptionNOOP = this.interruption_manager.NOOP;
 
-    const NOOP = this.NOOP;
+    caseCache[1] = this.NOOP;
     const delegator = this.delegator;
     const activeEvents = this.activeEvents;
 
@@ -257,7 +264,8 @@ const EventManager = {
     while (cursorIndex < len) {
       const eventName = activeEvents[cursorIndex];
       if (eventName !== "tick") {
-        delegator[eventName] = interruptionNOOP[eventName] ?? NOOP;
+        caseCache[0] = interruptionNOOP[eventName];
+        delegator[eventName] = caseCache[+(caseCache[0] === undefined)];
       }
       cursorIndex = ++this.resetCursor;
     }
@@ -266,17 +274,14 @@ const EventManager = {
 };
 
 const InterruptionManager = {
-  event_manager: null,
-  boot_manager: null,
-  
   NOOP: null, // eventName -> interruptionNOOPfunction
   eventIndexByName: null, // eventName -> eventIndex
   eventDataByIndex: null, // [[eventName, tickTimestamp, [arg0, ..., arg8]], ...]
-  
+
   eventRegistry: null, // eventName -> [interruptionStatus?, delayMs?, limitMs?, gapMs?, cooldownMs?]
   defaultRetryTicks: null, // Int32Array([delay, limit, interval, cooldown])
   maxDequeuePerTick: 1,
-  
+
   tickCount: -1,
   eventRetryTicksByIndex: null, // [Int32Array([counter, cooldownTimestamp, delay, limit, interval, cooldown]), ...]
   dequeueStateMask: null, // Uint32Array(2)
@@ -286,37 +291,18 @@ const InterruptionManager = {
   isActive: false,
   established: false,
 
-  RETRY_INDEX: {
-    COUNTER: 0,
-    COOLDOWN_TIMESTAMP: 1,
-    DELAY: 2,
-    LIMIT: 3,
-    INTERVAL: 4,
-    COOLDOWN: 5,
-    OFFSET_EVENT_REGISTRY: -1,
-    OFFSET_DEFAULT_RETRY_TICKS: -2,
-  },
-  DATA_INDEX: {
-    EVENT_NAME: 0,
-    TICK_TIMESTAMP: 1,
-    ARGUMENTS: 2,
-  },
-
   establish() {
     if (!this.established) {
-      this.eventRegistry = Configuration.EVENT_REGISTRY;
       const thisConfiguration = Configuration.interruption_manager;
       const defaultRetryTicks = this.defaultRetryTicks;
-      const RETRY_INDEX = this.RETRY_INDEX;
-      const OFFSET = RETRY_INDEX.OFFSET_DEFAULT_RETRY_TICKS;
       const delayTicks = ((thisConfiguration.default_retry_delay_ms | 0) * 0.02) | 0;
-      defaultRetryTicks[RETRY_INDEX.DELAY + OFFSET] = delayTicks & ~(delayTicks >> 31); // delayTicks > 0 ? delayTicks : 0
+      defaultRetryTicks[0] = delayTicks & ~(delayTicks >> 31); // delayTicks > 0 ? delayTicks : 0
       const limitTicks = ((thisConfiguration.default_retry_limit_ms | 0) * 0.02) | 0;
-      defaultRetryTicks[RETRY_INDEX.LIMIT + OFFSET] = limitTicks & ~(limitTicks >> 31); // limitTicks > 0 ? limitTicks : 0
+      defaultRetryTicks[1] = limitTicks & ~(limitTicks >> 31); // limitTicks > 0 ? limitTicks : 0
       const intervalTicks = ((thisConfiguration.default_retry_interval_ms | 0) * 0.02) | 0;
-      defaultRetryTicks[RETRY_INDEX.INTERVAL + OFFSET] = intervalTicks & ~(intervalTicks >> 31); // intervalTicks > 0 ? intervalTicks : 0
+      defaultRetryTicks[2] = intervalTicks & ~(intervalTicks >> 31); // intervalTicks > 0 ? intervalTicks : 0
       const cooldownTicks = ((thisConfiguration.default_retry_cooldown_ms | 0) * 0.02) | 0;
-      defaultRetryTicks[RETRY_INDEX.COOLDOWN + OFFSET] = (cooldownTicks & ~(cooldownTicks >> 31)) + (-cooldownTicks >> 31) + 1; // cooldownTicks > 0 ? cooldownTicks : 1
+      defaultRetryTicks[3] = (cooldownTicks & ~(cooldownTicks >> 31)) + (-cooldownTicks >> 31) + 1; // cooldownTicks > 0 ? cooldownTicks : 1
       const maxDequeuePerTick = thisConfiguration.max_dequeue_per_tick | 0;
       this.maxDequeuePerTick = (maxDequeuePerTick & ~(maxDequeuePerTick >> 31)) + (-maxDequeuePerTick >> 31) + 1; // maxDequeuePerTick > 0 ? maxDequeuePerTick : 1
 
@@ -332,6 +318,7 @@ const InterruptionManager = {
   },
 
   seedEventRetryTicks() {
+    const caseCache = [null, null];
     const eventDataByIndex = this.eventDataByIndex;
 
     const eventRegistry = this.eventRegistry;
@@ -339,147 +326,141 @@ const InterruptionManager = {
 
     const eventRetryTicksByIndex = this.eventRetryTicksByIndex;
 
-    const RETRY_INDEX = this.RETRY_INDEX;
-    const COUNTER = RETRY_INDEX.COUNTER,
-      COOLDOWN_TIMESTAMP = RETRY_INDEX.COOLDOWN_TIMESTAMP,
-      DELAY = RETRY_INDEX.DELAY,
-      LIMIT = RETRY_INDEX.LIMIT,
-      INTERVAL = RETRY_INDEX.INTERVAL,
-      COOLDOWN = RETRY_INDEX.COOLDOWN,
-      OFFSET_EVENT_REGISTRY = RETRY_INDEX.OFFSET_EVENT_REGISTRY,
-      OFFSET_DEFAULT_RETRY_TICKS = RETRY_INDEX.OFFSET_DEFAULT_RETRY_TICKS;
-    const EVENT_NAME = this.DATA_INDEX.EVENT_NAME;
-
     const len = eventRetryTicksByIndex.length;
     let cursorIndex = this.seedCursor;
     while (cursorIndex < len) {
-      const eventName = eventDataByIndex[cursorIndex][EVENT_NAME];
+      const eventName = eventDataByIndex[cursorIndex][0];
       const registryEntry = eventRegistry[eventName];
       const retryEntry = eventRetryTicksByIndex[cursorIndex];
 
-      retryEntry[COUNTER] = 0;
-      retryEntry[COOLDOWN_TIMESTAMP] = 0;
+      retryEntry[0] = 0;
+      retryEntry[1] = 0;
 
-      const delayMs = registryEntry[DELAY + OFFSET_EVENT_REGISTRY];
-      if (delayMs === undefined || delayMs === null) {
-        retryEntry[DELAY] = defaultRetryTicks[DELAY + OFFSET_DEFAULT_RETRY_TICKS];
-      } else {
-        const delayTicks = ((delayMs | 0) * 0.02) | 0;
-        retryEntry[DELAY] = delayTicks & ~(delayTicks >> 31); // delayTicks > 0 ? delayTicks : 0
-      }
+      const delayMs = registryEntry[1];
+      const delayTicks = ((delayMs | 0) * 0.02) | 0;
+      caseCache[0] = delayTicks & ~(delayTicks >> 31); // delayTicks > 0 ? delayTicks : 0
+      caseCache[1] = defaultRetryTicks[0];
+      retryEntry[2] = caseCache[(delayMs === undefined) | (delayMs === null)];
 
-      const limitMs = registryEntry[LIMIT + OFFSET_EVENT_REGISTRY];
-      if (limitMs === undefined || limitMs === null) {
-        retryEntry[LIMIT] = defaultRetryTicks[LIMIT + OFFSET_DEFAULT_RETRY_TICKS];
-      } else {
-        const limitTicks = ((limitMs | 0) * 0.02) | 0;
-        retryEntry[LIMIT] = limitTicks & ~(limitTicks >> 31); // limitTicks > 0 ? limitTicks : 0
-      }
+      const limitMs = registryEntry[2];
+      const limitTicks = ((limitMs | 0) * 0.02) | 0;
+      caseCache[0] = limitTicks & ~(limitTicks >> 31); // limitTicks > 0 ? limitTicks : 0
+      caseCache[1] = defaultRetryTicks[1];
+      retryEntry[3] = caseCache[(limitMs === undefined) | (limitMs === null)];
 
-      const intervalMs = registryEntry[INTERVAL + OFFSET_EVENT_REGISTRY];
-      if (intervalMs === undefined || intervalMs === null) {
-        retryEntry[INTERVAL] = defaultRetryTicks[INTERVAL + OFFSET_DEFAULT_RETRY_TICKS];
-      } else {
-        const intervalTicks = ((intervalMs | 0) * 0.02) | 0;
-        retryEntry[INTERVAL] = intervalTicks & ~(intervalTicks >> 31); // intervalTicks > 0 ? intervalTicks : 0
-      }
+      const intervalMs = registryEntry[3];
+      const intervalTicks = ((intervalMs | 0) * 0.02) | 0;
+      caseCache[0] = intervalTicks & ~(intervalTicks >> 31); // intervalTicks > 0 ? intervalTicks : 0
+      caseCache[1] = defaultRetryTicks[2];
+      retryEntry[4] = caseCache[(intervalMs === undefined) | (intervalMs === null)];
 
-      const cooldownMs = registryEntry[COOLDOWN + OFFSET_EVENT_REGISTRY];
-      if (cooldownMs === undefined || cooldownMs === null) {
-        retryEntry[COOLDOWN] = defaultRetryTicks[COOLDOWN + OFFSET_DEFAULT_RETRY_TICKS];
-      } else {
-        const cooldownTicks = ((cooldownMs | 0) * 0.02) | 0;
-        retryEntry[COOLDOWN] = (cooldownTicks & ~(cooldownTicks >> 31)) + (-cooldownTicks >> 31) + 1; // cooldownTicks > 0 ? cooldownTicks : 1
-      }
+      const cooldownMs = registryEntry[4];
+      const cooldownTicks = ((cooldownMs | 0) * 0.02) | 0;
+      caseCache[0] = (cooldownTicks & ~(cooldownTicks >> 31)) + (-cooldownTicks >> 31) + 1; // cooldownTicks > 0 ? cooldownTicks : 1
+      caseCache[1] = defaultRetryTicks[3];
+      retryEntry[5] = caseCache[(cooldownMs === undefined) | (cooldownMs === null)];
 
       cursorIndex = ++this.seedCursor;
     }
     return (cursorIndex >= len);
   },
 
-  setInterruptionState(eventIndex) {
+  setInterruptionState(eventName) {
+    const eventIndex = this.eventIndexByName[eventName];
     this.dequeueStateMask[eventIndex >> 5] &= ~(1 << (eventIndex & 31));
     this.iterationStateMask[eventIndex >> 5] &= ~(1 << (eventIndex & 31));
   },
 
-  dequeue() {
-    const dequeueStateMask = this.dequeueStateMask;
-    if (!dequeueStateMask[0] && !dequeueStateMask[1]) {
-      return;
-    }
+  dispatcher: {
+    event_manager: null,
+    boot_manager: null,
 
-    const eventDataByIndex = this.eventDataByIndex;
+    eventDataByIndex: null,
+    eventRetryTicksByIndex: null,
+    dequeueStateMask: null,
+    iterationStateMask: null,
 
-    const tickCount = this.tickCount;
-    const eventRetryTicksByIndex = this.eventRetryTicksByIndex;
-    const iterationStateMask = this.iterationStateMask;
+    tickCount: 0,
+    budget: 0,
+    wordIndex: 0,
 
-    const RETRY_INDEX = this.RETRY_INDEX;
-    const COUNTER = RETRY_INDEX.COUNTER,
-      COOLDOWN_TIMESTAMP = RETRY_INDEX.COOLDOWN_TIMESTAMP,
-      DELAY = RETRY_INDEX.DELAY,
-      LIMIT = RETRY_INDEX.LIMIT,
-      INTERVAL = RETRY_INDEX.INTERVAL,
-      COOLDOWN = RETRY_INDEX.COOLDOWN;
-    const DATA_INDEX = this.DATA_INDEX;
-    const EVENT_NAME = DATA_INDEX.EVENT_NAME,
-      TICK_TIMESTAMP = DATA_INDEX.TICK_TIMESTAMP,
-      ARGUMENTS = DATA_INDEX.ARGUMENTS;
+    lsb: 0,
+    eventData: null,
+    eventRetry: null,
 
-    let budget = this.maxDequeuePerTick;
-    let wordIndex = 0;
-    while (wordIndex < 2) {
-      iterationStateMask[wordIndex] |= dequeueStateMask[wordIndex];
-      while (iterationStateMask[wordIndex] && budget > 0) {
-        const lsb = iterationStateMask[wordIndex] & -iterationStateMask[wordIndex];
-        const eventIndex = (wordIndex << 5) | (31 - Math.clz32(lsb));
-        const eventData = eventDataByIndex[eventIndex];
-        const eventRetry = eventRetryTicksByIndex[eventIndex];
+    get 1() {
+      this.lsb = this.iterationStateMask[this.wordIndex] & -this.iterationStateMask[this.wordIndex];
+      const eventIndex = (this.wordIndex << 5) | (31 - Math.clz32(this.lsb));
+      this.eventData = this.eventDataByIndex[eventIndex];
+      const eventRetry = this.eventRetry = this.eventRetryTicksByIndex[eventIndex];
 
-        if (tickCount - eventData[TICK_TIMESTAMP] <= eventRetry[DELAY]) {
-          iterationStateMask[wordIndex] &= ~lsb;
-          continue;
-        }
+      let continueCase = 1;
+      continueCase ^= this[continueCase * (this.tickCount - this.eventData[1] <= eventRetry[2]) * 2];
+      continueCase ^= this[continueCase * (eventRetry[1] >= this.tickCount) * 3];
+      continueCase ^= this[continueCase * (eventRetry[0] >= eventRetry[3]) * 4];
+      continueCase ^= this[continueCase * (!(eventRetry[0] % (eventRetry[4] + 1))) * 5];
+      this[continueCase * 6];
 
-        if (eventRetry[COOLDOWN_TIMESTAMP] >= tickCount) {
-          dequeueStateMask[wordIndex] &= ~lsb;
-          iterationStateMask[wordIndex] &= ~lsb;
-          continue;
-        }
+      this[(!!this.iterationStateMask[this.wordIndex]) & (this.budget > 0)];
+    },
 
-        if (eventRetry[COUNTER] >= eventRetry[LIMIT]) {
-          const interruptedRetryTicks = ((eventRetry[LIMIT] + eventRetry[INTERVAL]) / (eventRetry[INTERVAL] + 1)) | 0; // Math.ceil(limit / (interval + 1))
-          if (interruptedRetryTicks > 1) {
-            api.broadcastMessage([{
-              str: `Codeloader: InterruptionManager: "${eventData[EVENT_NAME]}" has been dropped after ${interruptedRetryTicks} consecutive interrupted retry ticks.`,
-              style: this.boot_manager.logStyle?.error ?? {}
-            }]);
-          }
-          const args = eventData[ARGUMENTS];
-          args[0] = args[1] = args[2] = args[3] = args[4] = args[5] = args[6] = args[7] = args[8] = undefined;
-          eventRetry[COUNTER] = 0;
-          eventRetry[COOLDOWN_TIMESTAMP] = tickCount + eventRetry[COOLDOWN];
-          dequeueStateMask[wordIndex] &= ~lsb;
-          iterationStateMask[wordIndex] &= ~lsb;
-          continue;
-        }
+    get 2() {
+      this.iterationStateMask[this.wordIndex] &= ~this.lsb;
+      return 1;
+    },
 
-        if (!(eventRetry[COUNTER] % (eventRetry[INTERVAL] + 1))) {
-          eventRetry[COUNTER]++;
-          const args = eventData[ARGUMENTS];
-          if (args) {
-            this.event_manager.delegator[eventData[EVENT_NAME]].apply(null, args);
-            args[0] = args[1] = args[2] = args[3] = args[4] = args[5] = args[6] = args[7] = args[8] = undefined;
-          }
-          eventRetry[COUNTER] = 0;
-          budget--;
-          continue
-        }
+    get 3() {
+      this.dequeueStateMask[this.wordIndex] &= ~this.lsb;
+      this.iterationStateMask[this.wordIndex] &= ~this.lsb;
+      return 1;
+    },
 
-        eventRetry[COUNTER]++;
-        iterationStateMask[wordIndex] &= ~lsb;
+    get 4() {
+      const eventRetry = this.eventRetry;
+      const interruptedRetryTicks = ((eventRetry[3] + eventRetry[4]) / (eventRetry[4] + 1)) | 0; // Math.ceil(limit / (interval + 1))
+      if (interruptedRetryTicks > 1) {
+        api.broadcastMessage([{
+          str: `Codeloader: InterruptionManager: "${this.eventData[0]}" has been dropped after ${interruptedRetryTicks} consecutive interrupted retry ticks.`,
+          style: this.boot_manager.logStyle?.error ?? {}
+        }]);
       }
-      wordIndex++;
+      const args = this.eventData[2];
+      args[0] = args[1] = args[2] = args[3] = args[4] = args[5] = args[6] = args[7] = args[8] = undefined;
+      eventRetry[0] = 0;
+      eventRetry[1] = this.tickCount + eventRetry[5];
+      this.dequeueStateMask[this.wordIndex] &= ~this.lsb;
+      this.iterationStateMask[this.wordIndex] &= ~this.lsb;
+      return 1;
+    },
+
+    get 5() {
+      this.eventRetry[0]++;
+      const args = this.eventData[2];
+      this.event_manager.delegator[this.eventData[0]].apply(null, args);
+      args[0] = args[1] = args[2] = args[3] = args[4] = args[5] = args[6] = args[7] = args[8] = undefined;
+      this.eventRetry[0] = 0;
+      this.budget--;
+      return 1;
+    },
+
+    get 6() {
+      this.eventRetry[0]++;
+      this.iterationStateMask[this.wordIndex] &= ~this.lsb;
+      return 1;
+    },
+  },
+
+  dequeue() {
+    if (this.dequeueStateMask[0] | this.dequeueStateMask[1]) {
+      const dispatcher = this.dispatcher;
+      dispatcher.tickCount = this.tickCount;
+      dispatcher.budget = this.maxDequeuePerTick;
+      let wordIndex = dispatcher.wordIndex = 0;
+      while (wordIndex < 2) {
+        this.iterationStateMask[wordIndex] |= this.dequeueStateMask[wordIndex];
+        dispatcher[!!this.iterationStateMask[wordIndex] & (dispatcher.budget > 0)]
+        wordIndex = ++dispatcher.wordIndex;
+      }
     }
   },
 };
@@ -529,7 +510,7 @@ const TickMultiplexer = {
       const delegator = this.event_manager.delegator;
       Object.defineProperty(globalThis, "tick", {
         configurable: true,
-        set: (fn) => { this.main = (typeof fn === "function") ? fn : NOOP; }
+        set: (fn) => { this.main = [NOOP, fn][+(typeof fn === "function")]; }
       });
       this.boot = delegator.tick;
       delegator.tick = this.dispatch;
@@ -544,7 +525,7 @@ const TickMultiplexer = {
       if (!this.interruption_manager.isActive) {
         Object.defineProperty(globalThis, "tick", {
           configurable: true,
-          set: (fn) => { delegator.tick = (typeof fn === "function") ? fn : NOOP; }
+          set: (fn) => { delegator.tick = [NOOP, fn][+(typeof fn === "function")]; }
         });
         delegator.tick = this.main;
       } else {
@@ -561,10 +542,10 @@ const JoinManager = {
   event_manager: null,
   interruption_manager: null,
   boot_manager: null,
-  
+
   resetOnReboot: true,
   maxDequeuePerTick: 1,
-  
+
   main: null,
   buffer: null, // [[playerId, fromGameReset], ...]
   joinState: null, // playerId -> 0/1/2
@@ -586,12 +567,10 @@ const JoinManager = {
       this.resetOnReboot = !!thisConfiguration.reset_on_reboot;
       const maxDequeuePerTick = thisConfiguration.max_dequeue_per_tick | 0;
       this.maxDequeuePerTick = (maxDequeuePerTick & ~(maxDequeuePerTick >> 31)) + (-maxDequeuePerTick >> 31) + 1; // maxDequeuePerTick > 0 ? maxDequeuePerTick : 1
-      
+
       this.main = this.event_manager.NOOP;
       this.buffer = [];
-      if (this.resetOnReboot || !this.joinState) {
-        this.joinState = {};
-      }
+      this.joinState = [this.joinState, {}][this.resetOnReboot | !this.joinState];
       this.dequeueCursor = 0;
 
       this.installed = false;
@@ -601,7 +580,7 @@ const JoinManager = {
   },
 
   seedFromOnlinePlayers() {
-    if (this.resetOnReboot || this.boot_manager.isPrimaryBoot) {
+    if (this.resetOnReboot | this.boot_manager.isPrimaryBoot) {
       const playerIds = api.getPlayerIds();
 
       const buffer = this.buffer;
@@ -628,10 +607,11 @@ const JoinManager = {
   install() {
     if (!this.installed) {
       this.event_manager.delegator.onPlayerJoin = this.dispatch;
-      const NOOP = this.interruption_manager.NOOP.onPlayerJoin ?? this.event_manager.NOOP;
+      const interruptionNOOP = this.interruption_manager.NOOP.onPlayerJoin;
+      const NOOP = [interruptionNOOP, this.event_manager.NOOP][+(interruptionNOOP === undefined)];
       Object.defineProperty(globalThis, "onPlayerJoin", {
         configurable: true,
-        set: (fn) => { this.main = (typeof fn === "function") ? fn : NOOP; }
+        set: (fn) => { this.main = [NOOP, fn][+(typeof fn === "function")]; }
       });
       this.installed = true;
     }
@@ -646,12 +626,11 @@ const JoinManager = {
 
     let budget = this.maxDequeuePerTick;
     let cursorIndex = this.dequeueCursor;
-    while (cursorIndex < buffer.length && budget > 0) {
+    while ((cursorIndex < buffer.length) & (budget > 0)) {
       const args = buffer[cursorIndex];
       const playerId = args[0];
-      const fromGameReset = args[1];
       if (joinState[playerId] !== STATE_PROCESSED) {
-        main(playerId, fromGameReset);
+        main(playerId, args[1]);
         joinState[playerId] = STATE_PROCESSED;
         budget--;
       }
@@ -659,15 +638,16 @@ const JoinManager = {
     }
     return (cursorIndex >= buffer.length);
   },
-  
+
   finalize() {
     if (!this.finalized) {
-      const NOOP = this.interruption_manager.NOOP.onPlayerJoin ?? this.event_manager.NOOP;
+      const interruptionNOOP = this.interruption_manager.NOOP.onPlayerJoin;
+      const NOOP = [interruptionNOOP, this.event_manager.NOOP][+(interruptionNOOP === undefined)];
       const delegator = this.event_manager.delegator;
       delegator.onPlayerJoin = this.main;
       Object.defineProperty(globalThis, "onPlayerJoin", {
         configurable: true,
-        set: (fn) => { delegator.onPlayerJoin = (typeof fn === "function") ? fn : NOOP; }
+        set: (fn) => { delegator.onPlayerJoin = [NOOP, fn][+(typeof fn === "function")]; }
       });
       this.finalized = true;
     }
@@ -676,7 +656,7 @@ const JoinManager = {
 
 const BlockManager = {
   boot_manager: null,
-  
+
   blocks: null, // [[x, y, z, lockedStatus?, evalStatus?], ...]
   defaultLockedStatus: true,
   defaultEvalStatus: true,
@@ -684,7 +664,7 @@ const BlockManager = {
   maxRequestsPerTick: 1,
   maxEvalsPerTick: 1,
   maxErrorLogs: 0,
-  
+
   phase: -1,
   blockLockedStatus: null, // blockId -> false/true
   chunkLoadState: null, // chunkId -> 0/1/2
@@ -702,7 +682,6 @@ const BlockManager = {
     REQUESTED: 1,
     LOADED: 2
   },
-  evalFn: (0, eval),
 
   establish() {
     if (!this.established) {
@@ -719,7 +698,7 @@ const BlockManager = {
       const maxErrorLogs = thisConfiguration.max_error_logs | 0;
       this.maxErrorLogs = maxErrorLogs & ~(maxErrorLogs >> 31); // maxErrorLogs > 0 ? maxErrorLogs : 0
 
-      this.phase = 0;
+      this.phase = 1;
       this.blockLockedStatus = {};
       this.chunkLoadState = {};
       this.chunkRequestQueue = [];
@@ -734,15 +713,13 @@ const BlockManager = {
   },
 
   main() {
-    if (BlockManager.phase === 0) {
-      return BlockManager._register();
-    }
-    if (BlockManager.phase === 1) {
-      BlockManager._initialize();
-    }
+    BlockManager[BlockManager.phase];
   },
 
-  _register() {
+  // register
+  get 1() {
+    const caseCache = [null, null];
+
     const blocks = this.blocks;
     const defaultLockedStatus = this.defaultLockedStatus;
     const defaultEvalStatus = this.defaultEvalStatus;
@@ -754,7 +731,7 @@ const BlockManager = {
     const len = blocks.length;
     let budget = this.maxRegistrationsPerTick;
     let cursorIndex = this.registerCursor;
-    while (cursorIndex < len && budget > 0) {
+    while ((cursorIndex < len) & (budget > 0)) {
       const block = blocks[cursorIndex] = blocks[cursorIndex].slice();
       const x = block[0] = (block[0] | 0) - ((block[0] < (block[0] | 0)) & 1); // Math.floor(x)
       const y = block[1] = (block[1] | 0) - ((block[1] < (block[1] | 0)) & 1); // Math.floor(y)
@@ -762,18 +739,13 @@ const BlockManager = {
 
       const blockId = (x + "|" + y + "|" + z);
 
-      if (block[3] === undefined || block[3] === null) {
-        blockLockedStatus[blockId] = block[3] = defaultLockedStatus;
-      } else {
-        blockLockedStatus[blockId] = block[3] = !!block[3];
-      }
+      caseCache[0] = !!block[3];
+      caseCache[1] = defaultLockedStatus;
+      blockLockedStatus[blockId] = block[3] = caseCache[(block[3] === undefined) | (block[3] === null)];
 
-      let blockEvalStatus = true;
-      if (block[4] === undefined || block[4] === null) {
-        blockEvalStatus = block[4] = defaultEvalStatus;
-      } else {
-        blockEvalStatus = block[4] = !!block[4];
-      }
+      caseCache[0] = !!block[4];
+      caseCache[1] = defaultEvalStatus;
+      const blockEvalStatus = block[4] = caseCache[(block[4] === undefined) | (block[4] === null)];
 
       if (blockEvalStatus) {
         const isChunkLoaded = api.isBlockInLoadedChunk(x, y, z);
@@ -790,35 +762,28 @@ const BlockManager = {
       budget--;
       cursorIndex = ++this.registerCursor;
     }
-    if (cursorIndex >= len) {
-      this.phase = !(this.hasAnyEvalBlocks) + 1; // hasAnyEvalBlocks === true ? 1 : 2
-    }
+
+    this.phase = 1 + (cursorIndex >= len) * (!(this.hasAnyEvalBlocks) + 1);  // hasAnyEvalBlocks === true ? 2 : 3
   },
 
-  _initialize() {
+  // initialize
+  get 2() {
     const chunkLoadState = this.chunkLoadState;
 
     const STATE_REQUESTED = this.CHUNK_LOAD_STATE.REQUESTED;
     const STATE_LOADED = this.CHUNK_LOAD_STATE.LOADED;
-    
+
     {
       const chunkRequestQueue = this.chunkRequestQueue;
 
       const len = chunkRequestQueue.length;
       let budget = this.maxRequestsPerTick;
       let cursorIndex = this.requestCursor;
-      while (cursorIndex < len && budget > 0) {
+      while ((cursorIndex < len) & (budget > 0)) {
         const requestEntry = chunkRequestQueue[cursorIndex];
         const chunkId = requestEntry[0];
 
-        if (chunkLoadState[chunkId] === STATE_REQUESTED) {
-          if (api.isBlockInLoadedChunk(requestEntry[1], requestEntry[2], requestEntry[3])) {
-            chunkLoadState[chunkId] = STATE_LOADED;
-            if (cursorIndex === this.requestCursor) {
-              this.requestCursor++;
-            }
-          }
-        } else if (api.getBlockId(requestEntry[1], requestEntry[2], requestEntry[3]) === 1) {
+        if (api.getBlockId(requestEntry[1], requestEntry[2], requestEntry[3]) === 1) {
           chunkLoadState[chunkId] = STATE_REQUESTED;
         } else {
           chunkLoadState[chunkId] = STATE_LOADED;
@@ -838,12 +803,10 @@ const BlockManager = {
 
       const errors = this.errors;
 
-      const evalFn = this.evalFn;
-
       const len = blocks.length;
       let budget = this.maxEvalsPerTick;
       let cursorIndex = this.evalCursor;
-      while (cursorIndex < len && budget > 0) {
+      while ((cursorIndex < len) & (budget > 0)) {
         const block = blocks[cursorIndex];
         if (!block[4]) {
           cursorIndex = ++this.evalCursor;
@@ -860,7 +823,7 @@ const BlockManager = {
         }
         try {
           const code = api.getBlockData(x, y, z)?.persisted?.shared?.text;
-          evalFn(code);
+          (0, eval)(code);
         } catch (e) {
           if (errors.length < maxErrorLogs) {
             errors[errors.length] = [x, y, z, e.name, e.message];
@@ -872,9 +835,7 @@ const BlockManager = {
       }
     }
 
-    if (this.evalCursor >= this.blocks.length) {
-      this.phase = 2;
-    }
+    this.phase = 2 + (this.evalCursor >= this.blocks.length);
   },
 
   isBlockLocked(position) {
@@ -882,7 +843,8 @@ const BlockManager = {
     const y = (position[1] | 0) - ((position[1] < (position[1] | 0)) & 1); // Math.floor(y)
     const z = (position[2] | 0) - ((position[2] < (position[2] | 0)) & 1); // Math.floor(z)
     const blockId = (x + "|" + y + "|" + z);
-    return (!this.boot_manager.isRunning && !!(this.blockLockedStatus[blockId] ?? true));
+    const blockLockedStatus = this.blockLockedStatus[blockId];
+    return !!(!this.boot_manager.isRunning & [!!blockLockedStatus, true][+(blockLockedStatus === undefined)]);
   },
 };
 
@@ -897,7 +859,7 @@ const BootManager = {
   showLoadTime: true,
   showErrors: true,
   logStyle: null,
-  
+
   phase: -1,
   tickCount: -1,
   loadTimeTicks: -1,
@@ -906,57 +868,28 @@ const BootManager = {
   isRunning: false,
 
   tick() {
-    const self = BootManager;
-    self.tickCount++;
-    if (self.phase === -1) {
-      return self._ensurePrimarySetup();
-    }
-    if (self.phase === 0) {
-      self._startBoot();
-    }
-    if (self.phase === 1) {
-      self._delay();
-    }
-    if (self.phase === 2) {
-      return self._establish();
-    }
-    if (self.phase === 3) {
-      self._setupEvents();
-    }
-    if (self.phase === 4) {
-      self._seed();
-    }
-    if (self.phase === 5) {
-      return self._install();
-    }
-    if (self.phase === 6) {
-      self._startInitializer();
-    }
-    if (self.phase === 7) {
-      self._startJoinDequeue();
-    }
-    if (self.phase === 8) {
-      self._tickJoinDequeue();
-    }
-    if (self.phase === 9) {
-      self._finishBoot();
-    }
+    BootManager.tickCount++;
+    BootManager[BootManager.phase];
   },
 
-  _ensurePrimarySetup() {
+  // ensure primary setup
+  get 12() {
     if (this.isPrimaryBoot) {
-      if (!this.event_manager.isPrimarySetupDone && this.tickCount >= 10) {
+      if ((!this.event_manager.isPrimarySetupDone) & (this.tickCount >= 10)) {
         const error = this.event_manager.primarySetupError;
         const logs = `Codeloader: EventManager: ${(error === null) ? "Undefined e" : "E"}rror on events primary setup${(error === null) ? "." : ` - ${error[0]}: ${error[1]}.`}`;
         const playerIds = api.getPlayerIds();
         for (const playerId of playerIds) {
-          api.kickPlayer(playerId, logs);
+          if (api.playerIsInGame(playerId)) {
+            api.kickPlayer(playerId, logs);
+          }
         }
       }
     }
   },
 
-  _startBoot() {
+  // start boot
+  get 1() {
     if (!this.isRunning) {
       this.tickCount = 0;
 
@@ -979,36 +912,41 @@ const BootManager = {
       this.block_manager.established = false;
 
       this.isRunning = true;
-      this.phase = 1;
-    }
-  },
-
-  _delay() {
-    if (this.tickCount >= this.bootDelayTicks) {
       this.phase = 2;
+      this[this.phase];
     }
   },
 
-  _establish() {
+  // main boot process delay
+  get 2() {
+    this.phase = 2 + (this.tickCount >= this.bootDelayTicks);
+    this[this.phase * (this.tickCount >= this.bootDelayTicks)];
+  },
+
+  // establish managers
+  get 3() {
     this.event_manager.establish();
     this.interruption_manager.establish();
     this.tick_multiplexer.establish();
     this.join_manager.establish();
     this.block_manager.establish();
-    this.phase = 3;
+    this.phase = 4;
   },
-  
-  _setupEvents() {
+
+  // setup events
+  get 4() {
     let completed = 1;
     if (this.isPrimaryBoot) {
       completed &= this.event_manager.primaryInstall();
     }
     if (completed && this.event_manager.resetHandlers()) {
-      this.phase = 4
+      this.phase = 5;
+      this[this.phase];
     }
   },
 
-  _seed() {
+  // seed data
+  get 5() {
     let completed = 1;
     if (this.interruption_manager.isActive) {
       completed &= this.interruption_manager.seedEventRetryTicks();
@@ -1016,41 +954,43 @@ const BootManager = {
     if (this.event_manager.isEventActive.onPlayerJoin) {
       completed &= this.join_manager.seedFromOnlinePlayers();
     }
-    if (completed) {
-      this.phase = 5;
-    }
+    this.phase = 5 + completed;
+    this[this.phase * completed];
   },
 
-  _install() {
+  // install managers
+  get 6() {
     if (this.event_manager.isEventActive.onPlayerJoin) {
       this.join_manager.install();
     }
     this.tick_multiplexer.install();
-    this.phase = 6;
-  },
-
-  _startInitializer() {
-    this.tick_multiplexer.init = this.block_manager.main;
     this.phase = 7;
   },
 
-  _startJoinDequeue() {
-    if (this.block_manager.phase === 2) {
-      if (this.event_manager.isEventActive.onPlayerJoin && this.join_manager.installed) {
-        this.phase = 8;
-      } else {
-        this.phase = 9;
-      }
+  // start block initializer
+  get 7() {
+    this.tick_multiplexer.init = this.block_manager.main;
+    this.phase = 8;
+  },
+
+  // start join dequeue
+  get 8() {
+    if (this.block_manager.phase === 3) {
+      this.phase = 8 + (1 + !this.event_manager.isEventActive.onPlayerJoin);
+      this[this.phase];
     }
   },
 
-  _tickJoinDequeue() {
+  // tick join dequeue
+  get 9() {
     if (this.join_manager.dequeue()) {
-      this.phase = 9;
+      this.phase = 10;
+      this[this.phase];
     }
   },
 
-  _finishBoot() {
+  // finish boot
+  get 10() {
     if (this.event_manager.isEventActive.onPlayerJoin) {
       this.join_manager.finalize();
     }
@@ -1083,16 +1023,10 @@ const BootManager = {
   logLoadTime(showErrors) {
     const loadTimeMs = this.loadTimeTicks * 50;
     const errorsCount = this.block_manager.errors.length;
-    let logs = `Codeloader: BootManager: Code was loaded in ${loadTimeMs} ms`;
-    if (showErrors) {
-      logs += ` with ${errorsCount} error${errorsCount === 1 ? "" : "s"}.`
-    } else {
-      logs += ".";
-    }
-
+    const logs = `Codeloader: BootManager: Code was loaded in ${loadTimeMs} ms` + [`.`, ` with ${errorsCount} error${errorsCount === 1 ? "" : "s"}.`][+(showErrors)];
     api.broadcastMessage([{
       str: logs,
-      style: (errorsCount > 0 ? this.logStyle?.warning : this.logStyle?.success) ?? {},
+      style: [this.logStyle?.success, this.logStyle?.warning][+(errorsCount > 0)] ?? {},
     }]);
   },
 
@@ -1111,70 +1045,71 @@ const BootManager = {
   },
 };
 
-globalThis.Codeloader = Object.freeze({
-  get configuration() {
-    return Configuration;
-  },
+const Codeloader = globalThis.Codeloader = {
+  event_manager: null,
+  interruption_manager: null,
+  tick_multiplexer: null,
+  join_manager: null,
+  block_manager: null,
+  boot_manager: null,
+
+  configuration: null,
 
   get isRunning() {
-    return BootManager.isRunning;
-  },
-
-  get errors() {
-    return BlockManager.errors.slice();
+    return this.boot_manager.isRunning;
   },
 
   setInterruptionState(eventName) {
-    const eventIndex = InterruptionManager.eventIndexByName[eventName];
+    const eventIndex = this.interruption_manager.eventIndexByName[eventName];
     if (eventIndex === undefined) {
-      if (EventManager.isEventActive[eventName]) {
+      if (this.event_manager.isEventActive[eventName]) {
         api.broadcastMessage([{
           str: `Codeloader: InterruptionManager: setInterruptionState - "${eventName}" interruption status is false.`,
-          style: BootManager.logStyle?.warning ?? {}
+          style: this.boot_manager.logStyle?.warning ?? {}
         }]);
       } else {
         api.broadcastMessage([{
           str: `Codeloader: InterruptionManager: setInterruptionState - "${eventName}" is invalid active event name.`,
-          style: BootManager.logStyle?.error ?? {}
+          style: this.boot_manager.logStyle?.error ?? {}
         }]);
       }
       return;
     }
-    InterruptionManager.setInterruptionState(eventIndex);
+    this.interruption_manager.setInterruptionState(eventName);
   },
 
   isBlockLocked(position) {
-    return (!Array.isArray(position) || position.length !== 3 || BlockManager.isBlockLocked(position));
+    return (!Array.isArray(position) || position.length !== 3 || this.block_manager.isBlockLocked(position));
   },
 
   reboot() {
-    if (!BootManager.isRunning) {
-      EventManager.delegator.tick = BootManager.tick;
-      BootManager.phase = 0;
+    if (!this.boot_manager.isRunning) {
+      this.event_manager.delegator.tick = this.boot_manager.tick;
+      this.boot_manager.phase = 1;
     } else {
       api.broadcastMessage([{
         str: `Codeloader: BootManager: Wait until current running boot session is finished.`,
-        style: BootManager.logStyle?.warning ?? {}
+        style: this.boot_manager.logStyle?.warning ?? {}
       }]);
     }
   },
 
   logBootResult(showLoadTime = true, showErrors = true) {
-    BootManager.logBootResult(showLoadTime, showErrors);
+    this.boot_manager.logBootResult(showLoadTime, showErrors);
   },
 
   logLoadTime(showErrors = true) {
-    BootManager.logLoadTime(showErrors);
+    this.boot_manager.logLoadTime(showErrors);
   },
 
   logErrors() {
-    BootManager.logErrors();
+    this.boot_manager.logErrors();
   },
-});
+};
 
 EventManager.interruption_manager = InterruptionManager;
-InterruptionManager.event_manager = EventManager;
-InterruptionManager.boot_manager = BootManager;
+InterruptionManager.dispatcher.event_manager = EventManager;
+InterruptionManager.dispatcher.boot_manager = BootManager;
 TickMultiplexer.event_manager = EventManager;
 TickMultiplexer.interruption_manager = InterruptionManager;
 TickMultiplexer.boot_manager = BootManager;
@@ -1187,6 +1122,13 @@ BootManager.interruption_manager = InterruptionManager;
 BootManager.tick_multiplexer = TickMultiplexer;
 BootManager.join_manager = JoinManager;
 BootManager.block_manager = BlockManager;
+Codeloader.configuration = Configuration;
+Codeloader.event_manager = EventManager;
+Codeloader.interruption_manager = InterruptionManager;
+Codeloader.tick_multiplexer = TickMultiplexer;
+Codeloader.join_manager = JoinManager;
+Codeloader.block_manager = BlockManager;
+Codeloader.boot_manager = BootManager;
 
 {
   const delegator = EventManager.delegator = {};
@@ -1194,7 +1136,7 @@ BootManager.block_manager = BlockManager;
   EventManager.isPrimarySetupDone = false;
   EventManager.isPrimaryInstallDone = false;
 
-  BootManager.phase = -1;
+  BootManager.phase = 12;
   BootManager.isPrimaryBoot = true;
   BootManager.isRunning = false;
   BootManager.tickCount = 0;
@@ -1206,9 +1148,36 @@ BootManager.block_manager = BlockManager;
 
 try {
   EventManager.primarySetup();
-  BootManager.phase = 0;
+  const toSeal = [
+    Configuration,
+    Configuration.boot_manager,
+    Configuration.block_manager,
+    Configuration.join_manager,
+    Configuration.interruption_manager,
+    Configuration.LOG_STYLE,
+    EventManager,
+    InterruptionManager,
+    TickMultiplexer,
+    JoinManager,
+    BlockManager,
+    BootManager,
+  ];
+  const toFreeze = [
+    Configuration.ACTIVE_EVENTS,
+    Configuration.EVENT_REGISTRY,
+    Codeloader,
+  ];
+  toSeal.forEach(obj => {
+    Object.seal(obj);
+  });
+  toFreeze.forEach(obj => {
+    Object.freeze(obj);
+  });
+  EventManager.isPrimarySetupDone = true;
+  BootManager.phase = 1;
 } catch (e) {
   EventManager.primarySetupError = [e.name, e.message];
 }
 
 void 0;
+
