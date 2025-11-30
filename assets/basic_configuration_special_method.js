@@ -1,5 +1,5 @@
 const Configuration={
-ACTIVE_EVENTS:[
+ACTIVE_EVENTS:[ // modified
 "tick",
 "onPlayerJump",
 "onPlayerChat",
@@ -7,13 +7,13 @@ ACTIVE_EVENTS:[
 "onPlayerLeave",
 "onRespawnRequest",
 ],
-blocks:[
+blocks:[ // modified
 [0,2,5],
 ],
 boot_manager:{
-boot_delay_ms:200,
-show_load_time:false,
-show_errors:false,
+boot_delay_ms:100,
+show_load_time:false, // modified
+show_errors:false, // modified
 },
 block_manager:{
 default_locked_status:true,
@@ -21,19 +21,16 @@ default_eval_status:true,
 max_registrations_per_tick:32,
 max_requests_per_tick:8,
 max_evals_per_tick:16,
-max_error_logs:32,
+max_errors_count:32,
 },
 join_manager:{
 reset_on_reboot:true,
-max_dequeue_per_tick:8,
+max_dequeue_per_tick:16,
 },
-interruption_manager:{
-is_enabled:false,
-max_dequeue_per_tick:32,
-default_retry_delay_ms:0,
-default_retry_limit_ms:150,
-default_retry_interval_ms:50,
-default_retry_cooldown_ms:300,
+event_manager:{
+is_interruption_framework_enabled:false,
+default_retry_delay_ticks:0,
+default_retry_limit_ticks:2,
 },
 EVENT_REGISTRY:{
 tick:null,
@@ -102,6 +99,6 @@ LOG_STYLE:{
 error:{color:"#ff9d87",fontWeight:"600",fontSize:"1rem"},
 warning:{color:"#fcd373",fontWeight:"600",fontSize:"1rem"},
 success:{color:"#2eeb82",fontWeight:"600",fontSize:"1rem"},
-}
+},
 };
 
