@@ -306,6 +306,8 @@ const CodeLoader = {
         };
       }
     }
+
+    eventNOOP.tick = _NOOP;
   };
 
   _EM.primaryInstall = () => {
@@ -811,7 +813,9 @@ const CodeLoader = {
       if (_OM.phase === 2) {
         _EM.establish();
         _TM.establish();
-        _JM.establish();
+        if (!!_EM.activeEventType.onPlayerJoin) {
+          _JM.establish();
+        }
         _BM.establish();
         _OM.phase = 3;
       }

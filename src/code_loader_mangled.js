@@ -269,6 +269,7 @@ CL_={
         }
       }
     }
+    g.tick=N
   };
   _EM.j=()=>{
     if(D){
@@ -702,7 +703,9 @@ CL_={
       if(_OM.a===2){
         _EM.k();
         _TM.c();
-        _JM.b();
+        if(!!_EM.f.onPlayerJoin){
+          _JM.b()
+        }
         _BM.e();
         _OM.a=3
       }

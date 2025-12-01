@@ -29,12 +29,12 @@ It has built-in <a href="https://github.com/delfineonx/interruption-framework"><
 
 ## 📦 Installation
 
-Copy the loader source code entirely into your actual <code>World Code</code>.<br/>
+Copy the loader source code entirely into your real <code>World Code</code>.<br/>
 
 * [`Minified version`](https://github.com/delfineonx/block-code-loader/blob/main/src/code_loader_minified.js)
 
 <h6>- It self‑boots on the lobby start/creation.<br/>
-- If you want, you may put some non-event (not in-game callback) functions or other objects right after the loader source code, if there is some free space in your actual <code>World Code</code>.</h6>
+- If you want, you may put some non-event (not in-game callback) functions or other objects right after the loader source code, if there is some free space in your real <code>World Code</code>.</h6>
 
 ---
 
@@ -42,9 +42,10 @@ Copy the loader source code entirely into your actual <code>World Code</code>.<b
 
 ## ⚡ Quick Start
 
-Inside actual <code>World Code</code>: List the events you will use (their order doesn't matter) and list your blocks positions (their order does matter).</br>
+Inside real <code>World Code</code>: List the events you will use (their order doesn't matter) and list your blocks positions (their order does matter).</br>
 
 ```js
+// ---------- EXAMPLE ----------
 const Configuration={
   ACTIVE_EVENTS:[
     "tick",
@@ -66,9 +67,14 @@ const Configuration={
 };
 ```
 
-Inside your specified blocks: distribute the world code as you need (it has no difference in comparison to actual <code>World Code</code>), but remember that each block makes it's own scope ([`closure`](https://javascript.info/closure)). So you might need to change declarations of world code "global" variables or objects, if they were declared with <code>const</code> or <code>let</code> in the actual <code>World Code</code> previously.</br>
+Inside your specified blocks: distribute the world code as you need (it has almost no difference in comparison to real <code>World Code</code>).</br>
+Remember that each block makes its own scope ([`closure`](https://javascript.info/closure)). So you might need to modify declarations of "global" variables in your previous "world code". If they were declared with <code>const</code> or <code>let</code>, then change to one of these:
+- <code>globalThis.variableName</code> (explicitly - recommended)
+- <code>variableName</code> (implicitly)
+- <code>var variableName</code> (implicitly)
 
 ```js
+// ---------- EXAMPLE ----------
 tick = () => { }; // (2,2,2)
 onPlayerJump = (playerId) => { }; // (4,2,2)
 onPlayerChat = function (playerId, chatMessage, channelName) { }; // (6,2,2)
@@ -77,7 +83,7 @@ onPlayerLeave = function (playerId, serverIsShuttingDown) { }; // (8,2,2)
 onRespawnRequest = (playerId) => { }; // (8,2,2)
 ```
 
-Recommended to use anonymous or arrow function expressions assigned to your event handlers (callbacks), as global variables (globalThis). Function declarations for your event handlers (callbacks) names may lead sometimes to unexpected behaviour.</br>
+Recommended to use anonymous or arrow function expressions assigned to global variables (globalThis) with names of corresponding events (callbacks). Function declarations with names of corresponding events (callbacks) may lead sometimes to unexpected behaviour.</br>
 ✔️ <code>callbackName = function (...) {...};</code></br>
 ✔️ <code>callbackName = (...) => {...};</code></br>
 ⚠️ <code>function callbackName(...) {...}</code></br>
@@ -88,8 +94,9 @@ Recommended to use anonymous or arrow function expressions assigned to your even
 
 ## 🛠️ Configuration
 
-Configuration properties are <ins>sealed</ins>. You can change existing values by keys anytime, then call <code>CL.reboot()</code>.</br>
+Almost all configuration properties are <ins>sealed</ins> (<code>ACTIVE_EVENTS</code> and <code>EVENT_REGISTRY</code> are frozen). You can change existing values by keys anytime, then call <code>CL.reboot()</code>.</br>
 You cannot add or delete properties (prevents accidental shape changes).</br>
+Do not remove configuration properties (or their values in particular cases) from real <code>World Code</code> unless it is allowed (mentioned) in this documentation.
 
 ```js
 const Configuration = {
@@ -112,7 +119,7 @@ For each <code>callbackName</code> the loader ensures:</br></br>
 - Actual in-game <code>globalThis.callbackName(...args)</code> returns delegator call of your handler function</br>
 
 Not listed events are ignored (no wrapper is created).</br>
-You can add or delete active events in the loader configuration only in the actual <code>World Code</code>.</br>
+You can add or remove active events (string) in the loader configuration only in the real <code>World Code</code>.</br>
 
 <h3>〔 <code><b>blocks</b></code> 〕</h3> 
 
@@ -152,7 +159,7 @@ Coordinates are not limited by any number internally.</br>
 |---|---:|---:|---|
 | `default_locked_status` | Boolean | `true` | Default when block's entry `lockedStatus` is `null`/`undefined`. |
 | `default_eval_status` | Boolean | `true` | Default when block's entry `evalStatus` is `null`/`undefined`. |
-| `max_registrations_per_tick` | Number | `32` | Max blocks internally registered per tick during seeding process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
+| `max_registrations_per_tick` | Number | `32` | Max blocks internally processed per tick during registration process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
 | `max_requests_per_tick` | Number | `8` | Max chunks processed (requested or checked) per tick during initializing process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
 | `max_evals_per_tick` | Number | `16` | Max blocks evaluated per tick during initializing process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
 | `max_error_count` | Number | `32` | Max errors to retain and optionally broadcast. Min number is 0 (i.e. no errors are saved and none can be logged). Converted to integer and floored. |
@@ -161,27 +168,27 @@ Coordinates are not limited by any number internally.</br>
 
 | Property | Type | Default | Description |
 |---|---:|---:|---|
-| `is_interruption_framework_enabled` | Boolean | `false` | Master switch whether the framework is used for events primary setup. You can change it in the loader configuration only in actual <code>World Code</code>. |
+| `is_interruption_framework_enabled` | Boolean | `false` | Master switch whether the framework is used for events primary setup. You can change it in the loader configuration only in real <code>World Code</code>. |
 | `default_retry_delay_ticks` | Number | `0` | Default when event's registry entry `delayTicks` is `null`/`undefined`. Min number is 0 (i.e. immediately -- on the same tick or the next one). Integer-floored. |
 | `default_retry_limit_ticks` | Number | `2` | Default when event's registry entry `limitTicks` is `null`/`undefined`. Min number is 1 (i.e. at least one retry of interrupted delegator call). Integer-floored. |
 
 <h3>〔 <code><b>EVENT_REGISTRY</b></code> 〕</h3> 
 
-Map of <code>eventName -> [interruptionStatus?, delayTicks?, limitTicks?]</code>.</br>
+Map of <code>eventName -> [interruptionStatus?, delayTicks?, limitTicks?]</code> (or <code>eventName -> null</code>).</br>
 <code>interruptionStatus</code> is converted to boolean (if provided). <code>delayTicks</code>, <code>limitTicks</code> are integer-floored internally (if provided).</br>
 
 - <code><ins>interruptionStatus</ins></code>:</br>
   - <code>true</code> -- the event is enqueued internally before each delegator call.</br>
-  - <code>false</code> -- the event is called normally, it does not take part in <code>Interruption Framework</code> processeses.</br>
+  - <code>false</code> -- the event is called normally, it does not take part in <code>Interruption Framework</code> processes.</br>
   - omitted or <code>null</code> -- default <code>false</code> is used.</br>
 - <code><ins>delayTicks</ins></code>:</br>
-  Initial delay before the first retry attempt for current cached data of this event after (interruption) failed dequeue by <code>CL.state("eventName")</code> (or <code>IF.state = 0;</code>).</br>
+  Initial delay before the first retry attempt for current cached data of this event after (interruption) failed dequeue by <code>CL.state("eventName")</code> (or <code>IF.state = 0</code>).</br>
 - <code><ins>limitTicks</ins></code>:</br>
   Retry attempts budget. When the budget is exhausted, the consecutive retries for current cached data of this event are ended (dropped).</br>
 
-Do not change the event names in <code>EVENT_REGISTRY</code>.</br>
-You may remove only in the actual <code>World Code</code> those events from <code>EVENT_REGISTRY</code> which you do not use in <code>ACTIVE_EVENTS</code>.</br>
-You can change <code>interruptionStatus</code> in the loader configuration only in the actual <code>World Code</code>.</br>
+Do not change event names in <code>EVENT_REGISTRY</code>.</br>
+You may remove in real <code>World Code</code> only those events from <code>EVENT_REGISTRY</code> which you do not use in <code>ACTIVE_EVENTS</code>.</br>
+You can change <code>interruptionStatus</code> in the loader configuration only in real <code>World Code</code>.</br>
 <code>tick</code> callback is special and does not have interruption retry setup for itself.
 
 <h3>〔 <code><b>LOG_STYLE</b></code> 〕</h3> 
@@ -269,7 +276,7 @@ logLoadTime(showErrors = true)
 logErrors()
 ```
 
-> **Tip**: Use <code>!CL.isBlockLocked(position)</code> in your blocks as a guard (codition block) to avoid unwanted (re-)initialization of the code.
+> **Tip**: Use <code>!CL.isBlockLocked(position)</code> in your blocks as a guard (condition block) to avoid unwanted (re-)initialization of the code.
 
 ---
 
@@ -278,7 +285,7 @@ logErrors()
 ## 🧪 Example
 
 Download the file and paste it using <code>World Builder</code> at position <code>(0, 0, 0)</code>.</br>
-Copy the configuration and replace the old with a new one in your actual <code>World Code</code>.</br>
+Copy the configuration and replace the old with a new one in your real <code>World Code</code>.</br>
 
 <div align="center">
 <h3> ⚙️ Basic setup ⚙️</br> </h3>
@@ -306,7 +313,7 @@ Copy the configuration and replace the old with a new one in your actual <code>W
 </div>
 
 <h3>✦ <em>description</em> ✦</br></h3>
-With thise loader you can prevent anyone from stealing (coping) your world code (originally is accessible by pressing `F8` or directly from the code block editor pop-up window, which is also possible in a custom game). Though some (not all) hackers/exploiters can still access data of any block in the world where the chunk is loaded (i.e. your hidden code), and there is no good solution to be safe in a such case. Most you can do is to use <code>obfuscated code</code> in blocks data.
+With this loader you can prevent anyone from stealing (coping) your world code (originally is accessible by pressing `F8` or directly from the code block editor pop-up window, which is also possible in a custom game). Though some (not all) hackers/exploiters can still access data of any block in the world where the chunk is loaded (i.e. your hidden code), and there is no good solution to be safe in a such case. Most you can do is to use <code>obfuscated code</code> in blocks data.
 
 <h3>✦ <em>recommendation</em> ✦</br></h3>
 Place all the code blocks that you use for your world code far away enough and/or close them inside some multi-layer (optionally bedrock) box.
@@ -319,14 +326,14 @@ If you are worried that hacker can somehow evaluate/execute your code in blocks 
 </div>
 
 <h3>✦ <em>description</em> ✦</br></h3>
-<code>16000</code> chars — actual <code>World Code</code> capacity.</br>
+<code>16000</code> chars — real <code>World Code</code> capacity.</br>
 <code>10960</code> chars — default loader minified source code.</br>
 <code>12360</code> chars — if you include all possible callback names into <code>ACTIVE_EVENTS</code>.</br></br>
 
 Considering the following assumptions:</br>
 • <code>[-100000,-100000,-100000,false,false],</code> — average max block entry by chars (39),</br>
 • <code>[10,10,10,true,true],</code> — average min block entry by chars (22);</br>
--- we can get <code>16000 - 12360 = 3640</code> chars of free space which should be enough for <code>90–160+</code> blocks inside actual <code>World Code</code>.</br>
+-- we can get <code>16000 - 12360 = 3640</code> chars of free space which should be enough for <code>90–160+</code> blocks inside real <code>World Code</code>.</br>
 
 <h3>✦ <em>special method</em> ✦</br></h3>
 You can achieve truly UNLIMITED world code by changing <code>CL.configuration.blocks</code> at runtime, </br>
@@ -366,9 +373,9 @@ Here are the corresponding configurations to test for <code>Basic</code> and <co
 </div>
 
 <h3>✦ <em>description</em> ✦</br></h3>
-This can be really useful when you don't need to reboot your whole world code and just want to partially change some behavior (usually while testing). When you have <ins>code</ins> that is:</br>
+This can be really useful when you don't need to reboot your whole world code and just want to partially change/update some behavior (usually while testing). When you have <ins>code</ins> that is:</br>
 • either under <code>!CL.isBlockLocked(position)</code> guard in the code blocks with <code>lockedStatus = false</code>,</br>
-• or not guarded with such any type of this thing;</br>
+• or not guarded with any type of this thing;</br>
 -- it can be evaluated/(re-)initialized (i.e. simply by clicking the code block) <ins>anytime</ins> without using <code>CL.reboot()</code>. And if the <ins>code</ins> has your handler functions (callbacks) inside — they will be updated right away.
 
 <div align="center">
@@ -376,7 +383,7 @@ This can be really useful when you don't need to reboot your whole world code an
 </div>
 
 <h3>✦ <em>description</em> ✦</br></h3>
-First of all, you must manually put (preferably at the very top) <code>Interruption Framework</code> runner inside your tick:</br>
+You must manually put (preferably at the very top) <code>Interruption Framework</code> runner inside your tick function:</br></br>
 
 ```js
 tick = () => {
@@ -395,8 +402,8 @@ eventName = (...args) => {
 ```
 
 Here <code>CL.state("eventName")</code> is a wrapped functionality of <code>Interruption Framework</code>.</br>
-This is made for better debug in case if interruption setup or place where it is used is wrong.</br>
-There is also an alternative way to get the same behaviour (less overhead, but may be harder to debug):</br>
+This is made for better debug, in case if interruption setup or place where it is used is wrong.</br>
+There is also an alternative way to get the same behaviour (much less overhead, but may be harder to debug):</br>
 
 ```js
 eventName = (...args) => {
@@ -415,9 +422,11 @@ Consider also the following information (citation from [`code_loader_original.js
 // if event has special return value, then `interruptionStatus = false` setup is recommended
 ```
 
+i.e. if event is interrupted and later retried inside tick (that's how Interruption Framework works) than those special return values won't work (as in normal game callback call).
+
 <h3>✦ <em>recommendation</em> ✦</br></h3>
 
-For the basic simple usage of the loader and no dealing with these specifications ensure the next configuration option in the actual <code>World Code</code>:</br>
+For the basic simple usage of the loader and no dealing with these specifications ensure the next configuration option in the real <code>World Code</code>:</br>
 
 ```js
 // ...
@@ -427,6 +436,7 @@ For the basic simple usage of the loader and no dealing with these specification
   },
 // ...
 ```
+
 and that you do not have any of the following pieces somewhere <ins>randomly left</ins> in your codes:
 
 ```js
@@ -461,11 +471,11 @@ IF.state = 0;
 : 1) Ensure block's `evalStatus` flag (or `default_eval_status`) is `true`.</br>
 : 2) Use only anonymous or arrow function expressions assigned to your event handlers (callbacks), as global variables. Do not use function declarations for your event handlers (callbacks) names.
 
-- <code>Changed configuration (not in actual `World Code`) but behavior didn't update.</code></br>
+- <code>Changed configuration (not in real `World Code`) but behavior didn't update.</code></br>
 : Modify `CL.configuration`, then call `CL.reboot()` so the loader re‑reads settings.
 
 - <code>Interrupted events are never retried.</code></br>
 : 1) Ensure the configuration is correct, the Interruption Framework setup for events is enabled (`event_manager.is_interruption_framework_enabled = true`).</br>
-: 2) Set the corresponding event `interruptionStatus` flag to `true` and include `CL.state("eventName")` inside your handler (callback) function in a proper place (preferably on top).
+: 2) Set the corresponding event `interruptionStatus` flag to `true` and include `CL.state("eventName")` (or `IF.state = 0`) inside your handler (callback) function in a proper place (preferably on top).
 
 ---
