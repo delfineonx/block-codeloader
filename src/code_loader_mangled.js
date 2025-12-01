@@ -802,7 +802,7 @@ CL_={
 }
 // Tick Event Setup
 {
-  let d=EM_.e={};
+  let d=EM_.e;
   d.tick=OM_.h;
   globalThis.tick=function(){
     d.tick()

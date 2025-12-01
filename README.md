@@ -66,7 +66,7 @@ const Configuration={
 };
 ```
 
-Inside your specified blocks: distribute the world code as you need (it has no difference in comparison to actual <code>World Code</code>), but remember that each block makes it's own scope ([`closure`](https://javascript.info/closure). So you might need to change declarations of world code "global" variables or objects, if they were declared with <code>const</code> or <code>let</code> in actual <code>World Code</code> previously.</br>
+Inside your specified blocks: distribute the world code as you need (it has no difference in comparison to actual <code>World Code</code>), but remember that each block makes it's own scope ([`closure`](https://javascript.info/closure)). So you might need to change declarations of world code "global" variables or objects, if they were declared with <code>const</code> or <code>let</code> in the actual <code>World Code</code> previously.</br>
 
 ```js
 tick = () => { }; // (2,2,2)
@@ -180,7 +180,7 @@ Map of <code>eventName -> [interruptionStatus?, delayTicks?, limitTicks?]</code>
   Retry attempts budget. When the budget is exhausted, the consecutive retries for current cached data of this event are ended (dropped).</br>
 
 Do not change the event names in <code>EVENT_REGISTRY</code>.</br>
-You can remove only in the actual <code>World Code</code> those events from <code>EVENT_REGISTRY</code> which you do not use in <code>ACTIVE_EVENTS</code>.</br>
+You may remove only in the actual <code>World Code</code> those events from <code>EVENT_REGISTRY</code> which you do not use in <code>ACTIVE_EVENTS</code>.</br>
 You can change <code>interruptionStatus</code> in the loader configuration only in the actual <code>World Code</code>.</br>
 <code>tick</code> callback is special and does not have interruption retry setup for itself.
 
@@ -376,7 +376,7 @@ This can be really useful when you don't need to reboot your whole world code an
 </div>
 
 <h3>✦ <em>description</em> ✦</br></h3>
-First of all, you must manually put (preferably at the very top) <code>Interruption Framework</code> runner inside your tick:
+First of all, you must manually put (preferably at the very top) <code>Interruption Framework</code> runner inside your tick:</br>
 
 ```js
 tick = () => {
@@ -385,7 +385,7 @@ tick = () => {
 }
 ```
 
-In the <code>Advanced example</code> bloxd schematic of <code>Example</code> section you may see such usage cases of <code>CL.state("eventName")</code>:</br></br>
+In the <code>Advanced example</code> bloxd schematic of <code>Example</code> section you may see such usage cases of <code>CL.state("eventName")</code>:</br>
 
 ```js
 eventName = (...args) => {
@@ -396,7 +396,8 @@ eventName = (...args) => {
 
 Here <code>CL.state("eventName")</code> is a wrapped functionality of <code>Interruption Framework</code>.</br>
 This is made for better debug in case if interruption setup or place where it is used is wrong.</br>
-There is also an alternative way to get the same behaviour (less overhead, but may be harder to debug):
+There is also an alternative way to get the same behaviour (less overhead, but may be harder to debug):</br>
+
 ```js
 eventName = (...args) => {
   IF.state = 0;

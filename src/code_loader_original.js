@@ -933,7 +933,7 @@ const CodeLoader = {
 
 // Tick Event Setup
 {
-  const delegator = EventManager.delegator = {};
+  const delegator = EventManager.delegator;
   delegator.tick = BootManager.tick;
   globalThis.tick = function () {
     delegator.tick();

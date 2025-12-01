@@ -801,7 +801,7 @@ CodeLoader={
 }
 // Tick Event Setup
 {
-  let delegator=EventManager.delegator={};
+  let delegator=EventManager.delegator;
   delegator.tick=BootManager.tick;
   globalThis.tick=function(){
     delegator.tick()
