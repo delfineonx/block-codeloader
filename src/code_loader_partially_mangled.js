@@ -171,13 +171,15 @@ CodeLoader={
   let _IF=InterruptionFramework,
   _interrupted={},
   _queueId=0,
+  _queueSize=0,
   _external=1,
   _tickNum=0;
   Object.defineProperty(globalThis.InternalError.prototype,"name",{
     configurable:!0,
     get:()=>{
       if(_IF.state&_external){
-        _interrupted[++_queueId]=[_IF.handler,_IF.args,_IF.delay+_tickNum-1,_IF.limit]
+        _interrupted[++_queueId]=[_IF.handler,_IF.args,_IF.delay+_tickNum-1,_IF.limit];
+        _queueSize++
       }
       _external=1;
       _IF.state=0;
@@ -185,6 +187,10 @@ CodeLoader={
     }
   });
   _IF.tick=()=>{
+    if(!_queueSize){
+      _tickNum++;
+      return
+    }
     for(let id in _interrupted){
       let cache=_interrupted[id];
       if(cache[2]<_tickNum){
@@ -193,10 +199,11 @@ CodeLoader={
           cache[3]--;
           cache[0](...cache[1])
         }
-        delete _interrupted[id]
+        delete _interrupted[id];
+        _queueSize--;
+        _external=1
       }
     }
-    _external=1;
     _tickNum++
   };
 }

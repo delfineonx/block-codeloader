@@ -172,13 +172,15 @@ CL_={
   let _IF=IF_,
   I={},
   D=0,
+  S=0,
   E=1,
   N=0;
   Object.defineProperty(globalThis.InternalError.prototype,"name",{
     configurable:!0,
     get:()=>{
       if(_IF.state&E){
-        I[++D]=[_IF.handler,_IF.args,_IF.delay+N-1,_IF.limit]
+        I[++D]=[_IF.handler,_IF.args,_IF.delay+N-1,_IF.limit];
+        S++
       }
       E=1;
       _IF.state=0;
@@ -186,6 +188,10 @@ CL_={
     }
   });
   _IF.tick=()=>{
+    if(!S){
+      N++;
+      return
+    }
     for(let d in I){
       let c=I[d];
       if(c[2]<N){
@@ -194,10 +200,11 @@ CL_={
           c[3]--;
           c[0](...c[1])
         }
-        delete I[d]
+        delete I[d];
+        S--;
+        E=1
       }
     }
-    E=1;
     N++
   };
 }
