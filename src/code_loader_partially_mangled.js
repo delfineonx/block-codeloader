@@ -200,10 +200,10 @@ CodeLoader={
           cache[0](...cache[1])
         }
         delete _interrupted[id];
-        _queueSize--;
-        _external=1
+        _queueSize--
       }
     }
+    _external=1;
     _tickNum++
   };
 }

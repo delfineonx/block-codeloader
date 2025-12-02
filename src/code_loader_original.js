@@ -229,9 +229,9 @@ const CodeLoader = {
         }
         delete _interrupted[id];
         _queueSize--;
-        _external = 1;
       }
     }
+    _external = 1;
     _tickNum++;
   };
 }

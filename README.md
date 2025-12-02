@@ -327,13 +327,13 @@ If you are worried that hacker can somehow evaluate/execute your code in blocks 
 
 <h3>✦ <em>description</em> ✦</br></h3>
 <code>16000</code> chars — real <code>World Code</code> capacity.</br>
-<code>10960</code> chars — default loader minified source code.</br>
-<code>12360</code> chars — if you include all possible callback names into <code>ACTIVE_EVENTS</code>.</br></br>
+<code>11000</code> chars — default loader minified source code.</br>
+<code>12400</code> chars — if you include all possible callback names into <code>ACTIVE_EVENTS</code>.</br></br>
 
 Considering the following assumptions:</br>
 • <code>[-100000,-100000,-100000,false,false],</code> — average max block entry by chars (39),</br>
 • <code>[10,10,10,true,true],</code> — average min block entry by chars (22);</br>
--- we can get <code>16000 - 12360 = 3640</code> chars of free space which should be enough for <code>90–160+</code> blocks inside real <code>World Code</code>.</br>
+-- we can get <code>16000 - 12400 = 3600</code> chars of free space which should be enough for <code>90–160+</code> blocks inside real <code>World Code</code>.</br>
 
 <h3>✦ <em>special method</em> ✦</br></h3>
 You can achieve truly UNLIMITED world code by changing <code>CL.configuration.blocks</code> at runtime, </br>
@@ -422,7 +422,7 @@ Consider also the following information (citation from [`code_loader_original.js
 // if event has special return value, then `interruptionStatus = false` setup is recommended
 ```
 
-i.e. if event is interrupted and later retried inside tick (that's how Interruption Framework works) than those special return values won't work (as in normal game callback call).
+i.e. if event is interrupted and later retried inside tick (that is how Interruption Framework works) than those special return values won't work (as in normal game callback call).
 
 <h3>✦ <em>recommendation</em> ✦</br></h3>
 
