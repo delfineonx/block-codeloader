@@ -168,6 +168,7 @@ OM_={
 },
 CL_={
   configuration:null,
+  isPrimaryBoot:!0,
   isRunning:!1,
   isBlockLocked:null,
   logBootResult:null,
@@ -545,7 +546,12 @@ N_=function(){};
         W.delay=0;
         W.limit=1;
         W.phase=400000;
-        M(c,b[1]);
+        try{
+          M(c,b[1])
+        }catch(d){
+          W.state=0;
+          api.broadcastMessage("Code Loader: JoinManager: "+d.name+": "+d.message,{color:"#ff9d87"})
+        }
         W.state=0;
         a--;
         C--
@@ -902,7 +908,7 @@ N_=function(){};
     if(Y.a===8){
       Z.e();
       B.b=4;
-      Y.b=!1;
+      C.isPrimaryBoot=Y.b=!1;
       C.isRunning=Y.c=!1;
       Y.a=-1;
       T=N-D+1;

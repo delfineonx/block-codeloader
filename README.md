@@ -227,6 +227,15 @@ Global object <code>CL</code> has following:
 configuration
 
 /*
+ * Whether the current running boot session is "primary" - performed right after world code init.
+ * `true` only during the "primary" boot; `false` after the "primary" boot finishes.
+ * 
+ * It can be useful when total boot time is long enough and
+ * hence, particular actions in callbacks might depend on it.
+ */
+isPrimaryBoot
+
+/*
  * Whether the boot session is currently running.
  * `true` only during the boot; `false` before the boot stats or after it finishes.
  */
@@ -281,7 +290,6 @@ logExecutedBlocks()
 
 /**
  * Broadcast the collected execution (evaluation) errors from the last boot session.
- * (Same data as `errors`.)
  *
  * @returns {void}
  */

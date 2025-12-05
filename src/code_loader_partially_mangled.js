@@ -167,6 +167,7 @@ BootManager={
 },
 CodeLoader={
   configuration:null,
+  isPrimaryBoot:!0,
   isRunning:!1,
   isBlockLocked:null,
   logBootResult:null,
@@ -544,7 +545,12 @@ NOOP=function(){};
         _IF.delay=0;
         _IF.limit=1;
         _IF.phase=400000;
-        _main(playerId,args[1]);
+        try{
+          _main(playerId,args[1])
+        }catch(error){
+          _IF.state=0;
+          api.broadcastMessage("Code Loader: JoinManager: "+error.name+": "+error.message,{color:"#ff9d87"})
+        }
         _IF.state=0;
         budget--;
         _dequeueCursor--
@@ -901,7 +907,7 @@ NOOP=function(){};
     if(_OM.phase===8){
       _TM.finalize();
       _BM.phase=4;
-      _OM.isPrimaryBoot=!1;
+      _CL.isPrimaryBoot=_OM.isPrimaryBoot=!1;
       _CL.isRunning=_OM.isRunning=!1;
       _OM.phase=-1;
       _loadTimeTicks=_tickNum-_bootDelayTicks+1;

@@ -190,6 +190,7 @@ const BootManager = {
 };
 const CodeLoader = {
   configuration: null,
+  isPrimaryBoot: true,
   isRunning: false,
 
   isBlockLocked: null,
@@ -615,7 +616,12 @@ const NOOP = function () { };
         _IF.delay = 0;
         _IF.limit = 1;
         _IF.phase = 400000; // _IF.defaultPhase
-        _main(playerId, args[1]);
+        try {
+          _main(playerId, args[1]);
+        } catch (error) {
+          _IF.state = 0;
+          api.broadcastMessage("Code Loader: JoinManager: " + error.name + ": " + error.message, { color: "#ff9d87" });
+        }
         _IF.state = 0;
 
         budget--;
@@ -1032,7 +1038,7 @@ const NOOP = function () { };
     if (_OM.phase === 8) {
       _TM.finalize();
       _BM.phase = 4;
-      _OM.isPrimaryBoot = false;
+      _CL.isPrimaryBoot = _OM.isPrimaryBoot = false;
       _CL.isRunning = _OM.isRunning = false;
       _OM.phase = -1;
 
