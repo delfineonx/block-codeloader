@@ -94,7 +94,7 @@ Recommended to use anonymous or arrow function expressions assigned to global va
 
 ## 🛠️ Configuration
 
-Almost all configuration properties are <ins>sealed</ins> (<code>EVENT_REGISTRY</code> is frozen right after setup). You can change existing values by keys anytime, then call <code>CL.reboot()</code>.</br>
+Almost all configuration properties are <ins>sealed</ins> (<code>EVENT_REGISTRY</code> is frozen right on world code init). You can change existing values by keys anytime, then call <code>CL.reboot()</code>.</br>
 You cannot add or delete properties (prevents accidental shape changes).</br>
 Do not remove configuration properties (or their values in particular cases) from real <code>World Code</code> unless it is allowed (mentioned) in this documentation.
 
@@ -112,7 +112,7 @@ const Configuration = {
 ```
 
 <h3>〔 <code><b>ACTIVE_EVENTS</b></code> 〕</h3> 
-Events (in-game callbacks) the loader should wire up (recommendation: include only those, which you are going to use).</br>
+Events list (in-game callbacks) the loader should wire up (recommendation: include only those, which you are going to use).</br>
 
 Array of such entries:
 - <code>"eventName"</code>.</br>
@@ -122,7 +122,7 @@ Array of such entries:
   - fallback omitted or <code>undefined</code> -- <code>EVENT_REGISTRY[eventName]</code> default fallback value is used.</br>
   - fallback is <code>any other value</code> -- fallback value is set as provided.</br>
 
-For each <code>"eventName"</code> the loader ensures:</br></br>
+For each <code>"eventName"</code> the loader ensures:</br>
 
 - The delegator with <code>eventName</code> exists (your handler function; default to no‑op if missing)</br>
 - Actual in-game <code>globalThis.eventName(...args)</code> returns delegator call of your handler function</br>
@@ -145,7 +145,7 @@ Coordinates are integer‑floored internally. <code>lockedStatus</code> and <cod
   - omitted or <code>null</code> -- <code>block_manager.default_execution_status</code> is used.</br>
 
 Coordinates are not limited by any number internally.</br>
-<code>lockedStatus = false</code> allows you to reinitialize everything under <code>!CL.isBlockLocked(position)</code> guard anytime when you execute (eval) data of the block (or click the code block).
+<code>lockedStatus = false</code> allows you to reinitialize everything under <code>!CL.isBlockLocked(position)</code> guard anytime when you execute (evaluate) data of the block.
 
 <h3>〔 <code><b>boot_manager</b></code> 〕</h3> 
 
@@ -270,7 +270,7 @@ logBootResult(showLoadTime, showErrors, showExecutedBlocks)
  * @param {boolean} [showErrors = true] - Whether to show the errors count.
  * @returns {void}
  */
-logLoadTime(showErrors = true)
+logLoadTime(showErrors)
 
 /**
  * Broadcast all executed (evaluated) blocks as `"[blockName]" at ([x], [y], [z])`
@@ -309,7 +309,7 @@ Copy the configuration and replace the old with a new one in your real <code>Wor
 <div align="center">
 <h3> ⚙️ Advanced setup ⚙️</br> </h3>
 </div>
-<h6>Includes usage cases of <code>Interruption Framework</code> and <code>!CL.isBlockLocked(position)</code> guard.</h6>
+<h6>Includes usage cases of <code>Interruption Framework</code>, <code>!CL.isBlockLocked(position)</code> guard, and events fallback values.</h6>
 
 * [`Advanced example .bloxdshem`](https://github.com/delfineonx/block-code-loader/blob/main/assets/advanced_example.bloxdschem)
 * [`Advanced configuration`](https://github.com/delfineonx/block-code-loader/blob/main/assets/advanced_configuration.js)
@@ -340,16 +340,16 @@ If you are worried that hacker can somehow evaluate/execute your code in blocks 
 <h3>✦ <em>description</em> ✦</br></h3>
 <code>16000</code> chars — real <code>World Code</code> capacity.</br>
 <code>11850</code> chars — default loader minified source code.</br>
-<code>13250</code> chars — if you include all possible callback names into <code>ACTIVE_EVENTS</code>.</br></br>
+<code>14000</code> chars — if you include all possible callback names with fallback values into <code>ACTIVE_EVENTS</code> and also set <code>interruptionStatus</code> to <code>true</code> for all events inside <code>EVENT_REGISTRY</code></br></br>
 
 Considering the following assumptions:</br>
-• <code>[-100000,-100000,-100000,false,false],</code> — average max block entry by chars (39),</br>
+• <code>[-100000,-100000,-100000,false,false],</code> — max block entry by chars (39),</br>
 • <code>[10,10,10,true,true],</code> — average min block entry by chars (22);</br>
--- we can get <code>16000 - 13250 = 2750</code> chars of free space which should be enough for <code>70–120+</code> blocks inside real <code>World Code</code>.</br>
+-- we can get <code>16000 - 14000 = 1000</code> chars of free space which should be enough for <code>25–45+</code> blocks inside real <code>World Code</code>.</br>
 
 <h3>✦ <em>special method</em> ✦</br></h3>
 You can achieve truly UNLIMITED world code by changing <code>CL.configuration.BLOCKS</code> at runtime, </br>
-and then rebooting with the new configuration options.</br></br>
+and then rebooting with the new settings.</br></br>
 
 ```js
 // code block [0, 2, 5]
@@ -406,13 +406,13 @@ tick = () => {
 ```
 
 Obviously, you may use "inner" interruption safety (with idempotency) and state clearing without relying on Code Loader events interruption setup.</br>
-Though with help of built-in <code>Interruption Framework</code> the loader can make "outer" interruption safety (idempotency is up to user) and <ins>automatic</ins> clearing (no matter whether the handler call returns anything), which can be considered much safer.</br>
+Though with help of built-in <code>Interruption Framework</code> the loader can make "outer" interruption safety (idempotency is up to user) and <ins>automatic</ins> state (interruption tracking) clearing — even after handler return itself, which can be considered much safer.</br>
 
-You can also use <code>IF.state = 0</code> to clear interruption tracking even inside event with interruption setup enabled, if you want to be extra careful of irreparable "player or world state" changes, and use separate interruption trackings for other code snippets inside your handler. From the <code>Advanced example</code> bloxd schematic of <code>Example</code> section:</br>
+You can also use <code>IF.state = 0</code> to clear interruption tracking at any place (point) of your code even inside event with interruption setup enabled. It might be useful if you want to be extra careful of irreparable "player or world state" changes, and use separate interruption trackings for other code snippets inside your handler function. From the <code>Advanced example</code> bloxd schematic of <code>Example</code> section:</br>
 
 ```js
 // e.g. placed at the very top
-// i.e. checks only whether the interruption occurred on internal call by Code Loader (dynamic callback system specific)
+// i.e. it will check only whether the interruption is occurred on internal call by Code Loader (dynamic callback system specific)
 eventName = (...args) => {
   IF.state = 0;
   // other code ...
@@ -421,7 +421,7 @@ eventName = (...args) => {
 
 <h3>✦ <em>recommendation</em> ✦</br></h3>
 
-For the basic simple usage of the loader and no dealing with these specifications ensure the next configuration option in real <code>World Code</code>:</br>
+For the basic simple usage of the loader and no dealing with these specifics ensure the next configuration option in real <code>World Code</code>:</br>
 
 ```js
 // ...
@@ -442,24 +442,23 @@ For the basic simple usage of the loader and no dealing with these specification
 : The event in `ACTIVE_EVENTS` has no entry in `EVENT_REGISTRY`. Either rename the event in `ACTIVE_EVENTS` or add an entry to `EVENT_REGISTRY`.
 
 - <code>"Invalid active events: ..."</code></br>
-: 1) The event in `ACTIVE_EVENTS` has no entry in `EVENT_REGISTRY`.
-: - Either rename the event in `ACTIVE_EVENTS` or add an entry to `EVENT_REGISTRY`.
-: 2) The event was not wired to in-game callbacks on world code init (may happen if you change `ACTIVE_EVENTS` at runtime and then use reboot).
+: 1) The event in `ACTIVE_EVENTS` has no entry in `EVENT_REGISTRY`.</br>
+: Either rename the event in `ACTIVE_EVENTS` or add an entry to `EVENT_REGISTRY`.</br>
+: 2) The event was not wired up with in-game callbacks on world code init (may happen if you change `ACTIVE_EVENTS` at runtime and then use reboot).</br>
 : Either add the event in `ACTIVE_EVENTS` in real <code>World Code</code> or fix incorrect modifications for `ACTIVE_EVENTS` at runtime before rebooting.
 
 - <code>"Wait until current running boot session is finished."</code></br>
 : You called `CL.reboot()` while the another boot session is already in progress. Try again after it finishes.
 
 - <code>"Undefined error on events primary setup."</code> or <code>"Error on events primary setup - ..."</code></br>
-: Loader internal critical error. Ensure the configuration is correct or reinstall the loader source code (paste its minified version again).
-: (Or possibly interruption is occured on world code init).
+: Loader internal critical error (on world code init). Ensure the configuration is correct or reinstall the loader source code (paste its minified version again).</br>
 
 - <code>No code executes from my blocks.</code></br>
 : 1) Ensure block's `executionStatus` flag (or `default_execuion_status`) is `true`.</br>
-: 2) Use only anonymous or arrow function expressions assigned to your event handlers (callbacks), as global variables. Do not use function declarations for your event handlers (callbacks) names.
+: 2) Use only anonymous or arrow function expressions assigned to your event handlers (callbacks), as global variables. Do not use function declarations with event (callback) names.
 
 - <code>Changed configuration (not in real `World Code`) but behavior didn't update.</code></br>
-: Modify `CL.configuration`, then always call `CL.reboot()` so the loader re‑reads/re-applies settings.
+: Modify `CL.configuration` object values, then always call `CL.reboot()` so the loader re‑reads/re-applies settings.
 
 - <code>Interrupted events are never retried.</code></br>
 : 1) Ensure the configuration is correct, the Interruption Framework setup for events is enabled (`event_manager.is_interruption_framework_enabled = true`).</br>
