@@ -109,7 +109,7 @@ IF_={
   handler:()=>{},
   args:[],
   delay:0,
-  limit:1,
+  limit:2,
   phase:400000,
   cache:null,
   defaultPhase:400000,
@@ -192,7 +192,9 @@ N_=function(){};
       if(X){
         if(W.state){
           I[++E]=[W.phase,W.cache,W.handler,W.args,W.delay+N,W.limit];
-          S++
+          S++;
+          W.delay=0;
+          W.limit=2
         }
       }else{
         L[0]=W.phase;
@@ -550,7 +552,10 @@ N_=function(){};
           M(c,b[1])
         }catch(d){
           W.state=0;
-          api.broadcastMessage("Code Loader: JoinManager: "+d.name+": "+d.message,{color:"#ff9d87"})
+          api.broadcastMessage([{
+            str:"Code Loader: JoinManager: "+d.name+": "+d.message,
+            style:Y.d.error??{}
+          }])
         }
         W.state=0;
         a--;

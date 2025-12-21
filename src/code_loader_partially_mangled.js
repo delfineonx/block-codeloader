@@ -108,7 +108,7 @@ const InterruptionFramework={
   handler:()=>{},
   args:[],
   delay:0,
-  limit:1,
+  limit:2,
   phase:400000,
   cache:null,
   defaultPhase:400000,
@@ -191,7 +191,9 @@ NOOP=function(){};
       if(_external){
         if(_IF.state){
           _interrupted[++_enqueueId]=[_IF.phase,_IF.cache,_IF.handler,_IF.args,_IF.delay+_tickNum,_IF.limit];
-          _queueSize++
+          _queueSize++;
+          _IF.delay=0;
+          _IF.limit=2
         }
       }else{
         _element[0]=_IF.phase;
@@ -549,7 +551,10 @@ NOOP=function(){};
           _main(playerId,args[1])
         }catch(error){
           _IF.state=0;
-          api.broadcastMessage("Code Loader: JoinManager: "+error.name+": "+error.message,{color:"#ff9d87"})
+          api.broadcastMessage([{
+            str:"Code Loader: JoinManager: "+error.name+": "+error.message,
+            style:_OM.logStyle.error??{}
+          }])
         }
         _IF.state=0;
         budget--;
