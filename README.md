@@ -275,7 +275,7 @@ build(registryPosition, blocks, maxStorageUnitsPerTick)
  * @param {number} [maxStorageUnitsPerTick = 32]
  * @returns {void}
  */
-dispose(registryPosition, maxStorageUnitsPerTick = 32)
+dispose(registryPosition, maxStorageUnitsPerTick)
 
 /**
  * Internal task processor.
@@ -638,7 +638,10 @@ STYLES: [
 // 1) Create a registry (defines region where storage units can be placed)
 CL.SM.create([lowX, lowY, lowZ], [highX, highY, highZ]);
 
-// 2) Build storage from your block list
+// 2) Remove previously built storage units (optional, recommended to prevent mixed/duplicated data)
+CL.SM.dispose([registryX, registryY, registryZ]);
+
+// 3) Build storage from your block positions list
 CL.SM.build([registryX, registryY, registryZ], [
   [2, 2, 2],
   [4, 2, 2],
@@ -648,7 +651,7 @@ CL.SM.build([registryX, registryY, registryZ], [
 ```
 
 ```js
-// 3) Switch loader to chest mode
+// 4) Switch loader to chest mode
 
 // Either in real `World Code` (recommended)
 const configuration = {
