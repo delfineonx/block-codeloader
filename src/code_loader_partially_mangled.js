@@ -1,9 +1,9 @@
-// Copyright (c) 2025 delfineonx
+// Copyright (c) 2025-2026 delfineonx
 // This product includes "Code Loader" created by delfineonx.
 // This product includes "Interruption Framework" created by delfineonx.
 // Licensed under the Apache License, Version 2.0.
 
-const Configuration={
+const configuration={
   ACTIVE_EVENTS:[
     /* ... */
   ],
@@ -12,26 +12,22 @@ const Configuration={
   ],
   boot_manager:{
     boot_delay_ms: 100,
-    show_load_time: true,
-    show_executed_blocks: false,
-    show_errors: true,
+    show_boot_logs: true,
+    show_error_logs: true,
+    show_execution_logs: false
   },
   block_manager:{
-    default_locked_status: true,
-    default_execution_status: true,
-    max_registrations_per_tick: 32,
-    max_chunk_requests_per_tick: 8,
+    is_chest_data: false,
     max_executions_per_tick: 16,
-    max_errors_count: 32,
+    max_errors_count: 32
   },
   join_manager:{
     reset_on_reboot: true,
-    max_dequeue_per_tick: 16,
+    max_dequeue_per_tick: 16
   },
   event_manager:{
-    is_interruption_framework_enabled: false,
-    default_retry_delay_ticks: 0,
-    default_retry_limit_ticks: 2,
+    is_framework_enabled: false,
+    default_retry_limit: 2
   },
   EVENT_REGISTRY:{
     tick:null,
@@ -39,7 +35,7 @@ const Configuration={
     onPlayerJoin:[!1],
     onPlayerLeave:[!1],
     onPlayerJump:[!1],
-    onRespawnRequest:[[0,-200000,0]],
+    onRespawnRequest:[[0,-100000,0]],
     playerCommand:[null],
     onPlayerChat:[null],
     onPlayerChangeBlock:["preventChange"],
@@ -96,32 +92,40 @@ const Configuration={
     onPlayerFinishChargingItem:[!1],
     doPeriodicSave:[!1],
   },
-  LOG_STYLE:{
-    error:{color:"#ff9d87",fontWeight:"600",fontSize:"1rem"},
-    warning:{color:"#fcd373",fontWeight:"600",fontSize:"1rem"},
-    success:{color:"#2eeb82",fontWeight:"600",fontSize:"1rem"},
-  }
+  STYLES:[
+    "#FF775E","500","0.95rem",
+    "#FFC23D","500","0.95rem",
+    "#20DD69","500","0.95rem",
+    "#52B2FF","500","0.95rem"
+  ]
 };
 
-const InterruptionFramework={
+
+const _NOOP=function(){},
+_PREFIX="Code Loader",
+_log=(message,type)=>{
+  let styledText=_log.STYLES[type];
+  styledText[0].str=message;
+  api.broadcastMessage(styledText)
+},
+InterruptionFramework={
   state:0,
-  handler:()=>{},
+  fn:()=>{},
   args:[],
-  delay:0,
   limit:2,
-  phase:400000,
+  phase:1048576,
   cache:null,
-  defaultPhase:400000,
+  default:1048576,
   wasInterrupted:!1,
   tick:null
 },
 EventManager={
-  primarySetupError:null,
   isPrimarySetupDone:!1,
+  primarySetupError:null,
   delegator:{},
   isEventActive:{},
   unregisteredActiveEvents:[],
-  invalidActiveEvents:[],
+  invalidActiveEvents:null,
   established:!1,
   primarySetup:null,
   primaryInstall:null,
@@ -145,62 +149,67 @@ JoinManager={
   finalize:null
 },
 BlockManager={
-  init:null,
-  phase:4,
+  executeBlockData:null,
+  executeStorageData:null,
+  phase:-1,
   blocks:null,
   errors:null,
+  isChestData:!1,
+  registryLoaded:!1,
   established:!1,
   establish:null,
-  finalize:null,
-  isBlockLocked:null
+  finalize:null
 },
 BootManager={
   phase:-2,
   isPrimaryBoot:!0,
   isRunning:!1,
-  logStyle:null,
-  logBootResult:null,
-  logLoadTime:null,
-  logExecutedBlocks:null,
-  logErrors:null,
+  bootLogs:null,
+  errorLogs:null,
+  executionLogs:null,
+  completeLogs:null,
+  tick:null
+},
+StorageManager={
+  create:null,
+  check:null,
+  build:null,
+  dispose:null,
   tick:null
 },
 CodeLoader={
-  configuration:null,
+  SM:null,
+  config:null,
   isPrimaryBoot:!0,
   isRunning:!1,
-  isBlockLocked:null,
-  logBootResult:null,
-  logLoadTime:null,
-  logExecutedBlocks:null,
-  logErrors:null
-},
-NOOP=function(){};
+  reboot:null,
+  bootLogs:null,
+  errorLogs:null,
+  executionLogs:null,
+  completeLogs:null
+};
 {
   let _IF=InterruptionFramework,
   _interrupted={},
-  _enqueueId=0,
-  _dequeueId=1,
-  _queueSize=0,
-  _element=[],
+  _emptyArgs=[],
   _external=1,
-  _tickNum=0;
+  _element=[],
+  _enqueueId=1,
+  _dequeueId=1,
+  _queueSize=0;
   Object.defineProperty(globalThis.InternalError.prototype,"name",{
     configurable:!0,
     get:()=>{
       if(_external){
         if(_IF.state){
-          _interrupted[++_enqueueId]=[_IF.phase,_IF.cache,_IF.handler,_IF.args,_IF.delay+_tickNum,_IF.limit];
-          _queueSize++;
-          _IF.delay=0;
-          _IF.limit=2
+          _interrupted[_enqueueId++]=[_IF.fn,_IF.args,_IF.limit,_IF.phase,_IF.cache];
+          _queueSize++
         }
       }else{
-        _element[0]=_IF.phase;
+        _element[3]=_IF.phase;
         _IF.wasInterrupted=!1;
         _external=1
       }
-      _IF.cache=null;
       _IF.state=0;
       return"InternalError"
     }
@@ -208,77 +217,69 @@ NOOP=function(){};
   _IF.tick=()=>{
     _IF.state=0;
     if(!_queueSize){
+      _IF.args=_emptyArgs;
       _IF.cache=null;
-      _tickNum++;
       return
     }
     _external=0;
     _IF.wasInterrupted=!0;
-    let element,
-    maxDequeueId=_enqueueId;
-    while(_dequeueId<=maxDequeueId){
-      element=_element=_interrupted[_dequeueId];
-      if(element[4]<=_tickNum){
-        if(element[5]>0){
-          element[5]--;
-          _IF.phase=element[0];
-          _IF.cache=element[1];
-          element[2](...element[3])
-        }
-        delete _interrupted[_dequeueId++];
-        _queueSize--
-      }else{
-        delete _interrupted[_dequeueId++];
-        _interrupted[++_enqueueId]=element
+    while(_dequeueId<_enqueueId){
+      _element=_interrupted[_dequeueId];
+      if(_element[2]>0){
+        _element[2]--;
+        _IF.phase=_element[3];
+        _IF.cache=_element[4];
+        _element[0](..._element[1])
       }
+      delete _interrupted[_dequeueId++];
+      _queueSize--
     }
     _IF.state=0;
+    _IF.args=_emptyArgs;
     _IF.cache=null;
     _IF.wasInterrupted=!1;
-    _external=1;
-    _tickNum++
+    _external=1
   }
 }
 {
-  let _EM=EventManager,
-  _NOOP=NOOP,
+  let _CF=configuration,
+  _IF=InterruptionFramework,
+  _EM=EventManager,
+  api_setCallbackValueFallback=api.setCallbackValueFallback,
   _primaryInstallCursor=0,
   _primaryActiveEvents=[],
-  _activeEvents=null,
-  _eventRegistry=null,
-  _resetCursor=0,
-  _setupCursor=0;
+  _activeEvents,
+  _eventRegistry,
+  _resetCursor,
+  _setupCursor;
   _EM.primarySetup=()=>{
     if(_EM.isPrimarySetupDone){
       return
     }
-    _eventRegistry=Configuration.EVENT_REGISTRY;
-    _activeEvents=Configuration.ACTIVE_EVENTS;
-    let thisConfig=Configuration.event_manager,
-    isInterruptionFrameworkEnabled=!!thisConfig.is_interruption_framework_enabled,
-    defaultRetryDelay=thisConfig.default_retry_delay_ticks|0;
-    defaultRetryDelay=defaultRetryDelay&~(defaultRetryDelay>>31);
-    let defaultRetryLimit=thisConfig.default_retry_limit_ticks|0;
+    _eventRegistry=_CF.EVENT_REGISTRY;
+    _activeEvents=_CF.ACTIVE_EVENTS;
+    let thisConfig=_CF.event_manager,
+    isFrameworkEnabled=!!thisConfig.is_framework_enabled,
+    defaultRetryLimit=thisConfig.default_retry_limit|0;
     defaultRetryLimit=(defaultRetryLimit&~(defaultRetryLimit>>31))+(-defaultRetryLimit>>31)+1;
     let delegator=_EM.delegator,
     isEventActive=_EM.isEventActive,
     unregisteredActiveEvents=_EM.unregisteredActiveEvents,
-    activeEventsNum=_activeEvents.length,
-    index=0;
-    while(index<activeEventsNum){
-      let listEntry=_activeEvents[index],
-      eventName=listEntry;
-      if(listEntry instanceof Array){
-        eventName=listEntry[0]
+    primaryIndex=0,
+    activeEventsCount=_activeEvents.length;
+    while(primaryIndex<activeEventsCount){
+      let eventName=_activeEvents[primaryIndex];
+      if(eventName instanceof Array){
+        eventName=eventName[0]
+      }
+      if(eventName==="tick"){
+        primaryIndex++;
+        continue
       }
       let registryEntry=_eventRegistry[eventName];
       if(registryEntry===void 0){
         unregisteredActiveEvents[unregisteredActiveEvents.length]=eventName;
-        index++;
-        continue
-      }
-      if(eventName==="tick"){
-        index++;
+        primaryIndex++;
         continue
       }
       _primaryActiveEvents[_primaryActiveEvents.length]=eventName;
@@ -287,26 +288,19 @@ NOOP=function(){};
         registryEntry=_eventRegistry[eventName]=[!1]
       }
       let interruptionStatus=!!registryEntry[1];
-      if(isInterruptionFrameworkEnabled&interruptionStatus){
-        let delay=registryEntry[2];
-        if(delay==null){
-          delay=defaultRetryDelay
+      if(isFrameworkEnabled&&interruptionStatus){
+        let retryLimit=registryEntry[2];
+        if(retryLimit==null){
+          retryLimit=defaultRetryLimit
         }
-        delay|=0;
-        let limit=registryEntry[3];
-        if(limit==null){
-          limit=defaultRetryLimit
-        }
-        limit|=0;
-        let _IF=InterruptionFramework;
+        retryLimit|=0;
         delegator[eventName]=_NOOP;
         globalThis[eventName]=function handler(arg0,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8){
           _IF.state=1;
-          _IF.handler=handler;
+          _IF.fn=handler;
           _IF.args=[arg0,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8];
-          _IF.delay=delay;
-          _IF.limit=limit;
-          _IF.phase=400000;
+          _IF.limit=retryLimit;
+          _IF.phase=1048576;
           try{
             return delegator[eventName](arg0,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8)
           }finally{
@@ -319,14 +313,14 @@ NOOP=function(){};
           return delegator[eventName](arg0,arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8)
         }
       }
-      index++
+      primaryIndex++
     }
     isEventActive.tick=!0
   };
   _EM.primaryInstall=()=>{
     let delegator=_EM.delegator,
-    activeEventsNum=_primaryActiveEvents.length;
-    while(_primaryInstallCursor<activeEventsNum){
+    activeEventsCount=_primaryActiveEvents.length;
+    while(_primaryInstallCursor<activeEventsCount){
       let eventName=_primaryActiveEvents[_primaryInstallCursor];
       Object.defineProperty(globalThis,eventName,{
         configurable:!0,
@@ -336,7 +330,8 @@ NOOP=function(){};
           }else{
             delegator[eventName]=_NOOP
           }
-        }
+        },
+        get:()=>delegator[eventName]
       });
       _primaryInstallCursor++
     }
@@ -348,14 +343,15 @@ NOOP=function(){};
         }else{
           delegator.tick=_NOOP
         }
-      }
+      },
+      get:()=>delegator.tick
     })
   };
   _EM.establish=()=>{
     if(_EM.established){
       return
     }
-    _activeEvents=Configuration.ACTIVE_EVENTS;
+    _activeEvents=_CF.ACTIVE_EVENTS;
     _EM.invalidActiveEvents=[];
     _resetCursor=0;
     _setupCursor=0;
@@ -363,20 +359,21 @@ NOOP=function(){};
   };
   _EM.resetHandlers=()=>{
     let delegator=_EM.delegator,
-    activeEventsNum=_primaryActiveEvents.length;
-    while(_resetCursor<activeEventsNum){
+    activeEventsCount=_primaryActiveEvents.length;
+    while(_resetCursor<activeEventsCount){
       delegator[_primaryActiveEvents[_resetCursor]]=_NOOP;
       _resetCursor++
     }
   };
   _EM.setupFallbacks=()=>{
     let isEventActive=_EM.isEventActive,
-    activeEventsNum=_activeEvents.length;
-    while(_setupCursor<activeEventsNum){
-      let listEntry=_activeEvents[_setupCursor],
-      eventName=listEntry;
-      if(listEntry instanceof Array){
-        eventName=listEntry[0]
+    activeEventsCount=_activeEvents.length,
+    eventEntry,eventName;
+    while(_setupCursor<activeEventsCount){
+      eventEntry=_activeEvents[_setupCursor];
+      eventName=eventEntry;
+      if(eventEntry instanceof Array){
+        eventName=eventEntry[0]
       }
       if(eventName==="tick"){
         _setupCursor++;
@@ -384,15 +381,15 @@ NOOP=function(){};
       }
       if(isEventActive[eventName]){
         let fallbackValue;
-        if(listEntry instanceof Array){
-          fallbackValue=listEntry[1]
+        if(eventEntry instanceof Array){
+          fallbackValue=eventEntry[1]
         }
         if(fallbackValue===void 0){
           fallbackValue=_eventRegistry[eventName][0]
         }else if(fallbackValue==="undefined"){
           fallbackValue=void 0
         }
-        api.setCallbackValueFallback(eventName,fallbackValue)
+        api_setCallbackValueFallback(eventName,fallbackValue)
       }else{
         _EM.invalidActiveEvents[_EM.invalidActiveEvents.length]=eventName
       }
@@ -401,14 +398,13 @@ NOOP=function(){};
   }
 }
 {
-  let _TM=TickMultiplexer,
-  _IF=InterruptionFramework,
+  let _IF=InterruptionFramework,
   _EM=EventManager,
-  _NOOP=NOOP,
-  _boot=null,
-  _main=null,
-  _installed=!1,
-  _finalized=!1;
+  _TM=TickMultiplexer,
+  _boot,
+  _main,
+  _installed,
+  _finalized;
   _TM.establish=()=>{
     if(_TM.established){
       return
@@ -420,16 +416,17 @@ NOOP=function(){};
     _finalized=!1;
     _TM.established=!0
   };
-  let dispatch=()=>{
+  let _dispatch=()=>{
     _IF.tick();
     _boot();
     _TM.init();
-    _main()
+    _main(50)
   };
   _TM.install=()=>{
     if(_installed){
       return
     }
+    let delegator=_EM.delegator;
     Object.defineProperty(globalThis,"tick",{
       configurable:!0,
       set:fn=>{
@@ -438,10 +435,11 @@ NOOP=function(){};
         }else{
           _main=_NOOP
         }
-      }
+      },
+      get:()=>delegator.tick
     });
     _boot=_EM.delegator.tick;
-    _EM.delegator.tick=dispatch;
+    _EM.delegator.tick=_dispatch;
     _installed=!0
   };
   _TM.finalize=()=>{
@@ -457,7 +455,8 @@ NOOP=function(){};
         }else{
           delegator.tick=_NOOP
         }
-      }
+      },
+      get:()=>delegator.tick
     });
     delegator.tick=_main;
     _boot=_NOOP;
@@ -466,27 +465,28 @@ NOOP=function(){};
   }
 }
 {
-  let _JM=JoinManager,
+  let _CF=configuration,
   _IF=InterruptionFramework,
   _EM=EventManager,
+  _JM=JoinManager,
   _OM=BootManager,
-  _NOOP=NOOP,
-  _resetOnReboot=!0,
-  _maxDequeue=1,
-  _main=null,
-  _buffer=null,
-  _joinState=null,
-  _dequeueCursor=0,
-  _installed=!1,
-  _finalized=!1;
+  _JMprefix=_PREFIX+" JM: ",
+  _resetOnReboot,
+  _maxDequeuePerTick,
+  _main,
+  _buffer,
+  _joinState,
+  _dequeueCursor,
+  _installed,
+  _finalized;
   _JM.establish=()=>{
     if(_JM.established){
       return
     }
-    let thisConfig=Configuration.join_manager;
+    let thisConfig=_CF.join_manager;
     _resetOnReboot=!!thisConfig.reset_on_reboot;
-    _maxDequeue=thisConfig.max_dequeue_per_tick|0;
-    _maxDequeue=(_maxDequeue&~(_maxDequeue>>31))+(-_maxDequeue>>31)+1;
+    _maxDequeuePerTick=thisConfig.max_dequeue_per_tick|0;
+    _maxDequeuePerTick=(_maxDequeuePerTick&~(_maxDequeuePerTick>>31))+(-_maxDequeuePerTick>>31)+1;
     _main=_NOOP;
     _buffer=[];
     if(_resetOnReboot|!_joinState){
@@ -497,15 +497,16 @@ NOOP=function(){};
     _finalized=!1;
     _JM.established=!0
   };
-  let dispatch=(playerId,fromGameReset)=>{
-    _buffer[_buffer.length]=[playerId,fromGameReset];
+  let _dispatch=playerId=>{
+    _buffer[_buffer.length]=playerId;
     _joinState[playerId]=1
   };
   _JM.install=()=>{
     if(_installed){
       return
     }
-    _EM.delegator.onPlayerJoin=dispatch;
+    let delegator=_EM.delegator;
+    delegator.onPlayerJoin=_dispatch;
     Object.defineProperty(globalThis,"onPlayerJoin",{
       configurable:!0,
       set:fn=>{
@@ -514,19 +515,19 @@ NOOP=function(){};
         }else{
           _main=_NOOP
         }
-      }
+      },
+      get:()=>delegator.onPlayerJoin
     });
     _installed=!0
   };
   _JM.bufferPlayers=()=>{
     if(_resetOnReboot|_OM.isPrimaryBoot){
       let playerIds=api.getPlayerIds(),
-      playersNum=playerIds.length,
-      index=0;
-      while(index<playersNum){
-        let playerId=playerIds[index];
+      index=0,
+      playerId;
+      while(playerId=playerIds[index]){
         if(!_joinState[playerId]){
-          _buffer[_buffer.length]=[playerId,!1];
+          _buffer[_buffer.length]=playerId;
           _joinState[playerId]=1
         }
         index++
@@ -534,31 +535,27 @@ NOOP=function(){};
     }
   };
   _JM.dequeue=()=>{
-    let budget=_maxDequeue;
-    while(_dequeueCursor<_buffer.length&budget>0){
-      let args=_buffer[_dequeueCursor],
-      playerId=args[0];
+    let budget=_maxDequeuePerTick,
+    playerId;
+    while(_dequeueCursor<_buffer.length&&budget>0){
+      playerId=_buffer[_dequeueCursor];
       if(_joinState[playerId]!==2){
         _dequeueCursor++;
         _joinState[playerId]=2;
         _IF.state=1;
-        _IF.handler=_main;
-        _IF.args=args;
-        _IF.delay=0;
-        _IF.limit=1;
-        _IF.phase=400000;
+        _IF.fn=_main;
+        _IF.args=[playerId];
+        _IF.limit=2;
+        _IF.phase=1048576;
         try{
-          _main(playerId,args[1])
+          _main(playerId)
         }catch(error){
           _IF.state=0;
-          api.broadcastMessage([{
-            str:"Code Loader: JoinManager: "+error.name+": "+error.message,
-            style:_OM.logStyle.error??{}
-          }])
+          _log(_JMprefix+error.name+": "+error.message,0)
         }
         _IF.state=0;
-        budget--;
-        _dequeueCursor--
+        _dequeueCursor--;
+        budget--
       }
       _dequeueCursor++
     }
@@ -577,7 +574,8 @@ NOOP=function(){};
         }else{
           delegator.onPlayerJoin=_NOOP
         }
-      }
+      },
+      get:()=>delegator.onPlayerJoin
     });
     delegator.onPlayerJoin=_main;
     _buffer=null;
@@ -585,272 +583,262 @@ NOOP=function(){};
   }
 }
 {
-  let _BM=BlockManager,
-  _OM=BootManager,
-  _defaultLockedStatus=!0,
-  _defaultExecutionStatus=!0,
-  _maxRegistrations=1,
-  _maxRequests=1,
-  _maxExecutions=1,
-  _maxErrors=0,
-  _blockLockedStatus=null,
-  _isChunkLoaded=null,
-  _hasAnyBlocksToEval=0,
-  _registerCursor=0,
-  _errorCursor=0,
-  _executionCursor=0,
-  _finalized=!1;
+  let _CF=configuration,
+  _BM=BlockManager,
+  api_getBlock=api.getBlock,
+  api_getBlockId=api.getBlockId,
+  api_getBlockData=api.getBlockData,
+  api_getStandardChestItems=api.getStandardChestItems,
+  _maxExecutionsPerTick,
+  _maxErrorsCount,
+  _errorIndex,
+  _blockIndex,
+  _registryItems,
+  _registrySlotIndex,
+  _coordsIndex,
+  _partition,
+  _finalized;
   _BM.establish=()=>{
     if(_BM.established){
       return
     }
-    _BM.blocks=Configuration.BLOCKS instanceof Array?Configuration.BLOCKS.slice():[];
-    let thisConfig=Configuration.block_manager;
-    _defaultLockedStatus=!!thisConfig.default_locked_status;
-    _defaultExecutionStatus=!!thisConfig.default_execution_status;
-    _maxRegistrations=thisConfig.max_registrations_per_tick|0;
-    _maxRegistrations=(_maxRegistrations&~(_maxRegistrations>>31))+(-_maxRegistrations>>31)+1;
-    _maxRequests=thisConfig.max_chunk_requests_per_tick|0;
-    _maxRequests=(_maxRequests&~(_maxRequests>>31))+(-_maxRequests>>31)+1;
-    _maxExecutions=thisConfig.max_executions_per_tick|0;
-    _maxExecutions=(_maxExecutions&~(_maxExecutions>>31))+(-_maxExecutions>>31)+1;
-    _maxErrors=thisConfig.max_errors_count|0;
-    _maxErrors=_maxErrors&~(_maxErrors>>31);
+    _BM.blocks=_CF.BLOCKS instanceof Array?_CF.BLOCKS:[];
+    let thisConfig=_CF.block_manager;
+    _BM.isChestData=!!thisConfig.is_chest_data;
+    _maxExecutionsPerTick=thisConfig.max_executions_per_tick|0;
+    _maxExecutionsPerTick=(_maxExecutionsPerTick&~(_maxExecutionsPerTick>>31))+(-_maxExecutionsPerTick>>31)+1;
+    _maxErrorsCount=thisConfig.max_errors_count|0;
+    _maxErrorsCount=_maxErrorsCount&~(_maxErrorsCount>>31);
     _BM.phase=0;
-    _blockLockedStatus={};
-    _isChunkLoaded={};
     _BM.errors=[null];
-    _hasAnyBlocksToEval=0;
-    _registerCursor=0;
-    _executionCursor=0;
-    _errorCursor=0;
+    _errorIndex=0;
+    _blockIndex=0;
+    _BM.registryLoaded=!1;
+    _registryItems=null;
+    _registrySlotIndex=1;
+    _coordsIndex=0;
+    _partition=0;
     _finalized=!1;
     _BM.established=!0
   };
-  let register=()=>{
-    let blocks=_BM.blocks,
-    blocksNum=blocks.length,
-    requestBudget=_maxRequests,
-    registerBudget=_maxRegistrations;
-    while(_registerCursor<blocksNum&registerBudget>0&requestBudget>0){
-      let block=blocks[_registerCursor].slice(),
-      x=block[0];
-      x=(x|0)-(x<(x|0));
-      let y=block[1];
-      y=(y|0)-(y<(y|0));
-      let z=block[2];
-      z=(z|0)-(z<(z|0));
-      let blockPositionId=x+"|"+y+"|"+z,
-      lockedStatus=block[3];
-      if(lockedStatus==null){
-        _blockLockedStatus[blockPositionId]=_defaultLockedStatus
-      }else{
-        _blockLockedStatus[blockPositionId]=!!lockedStatus
-      }
-      let evalStatus=block[4];
-      if(evalStatus==null){
-        evalStatus=block[3]=_defaultExecutionStatus
-      }else{
-        evalStatus=block[3]=!!evalStatus
-      }
-      if(evalStatus){
-        let chunkId=(x>>5)+"|"+(y>>5)+"|"+(z>>5);
-        if(_isChunkLoaded[chunkId]===void 0){
-          let blockName=block[4]=api.getBlock(x,y,z);
-          if(blockName==="Unloaded"){
-            _isChunkLoaded[chunkId]=!1;
-            requestBudget--
-          }else{
-            _isChunkLoaded[chunkId]=!0
-          }
-        }else{
-          block[4]="Unloaded"
-        }
-        _hasAnyBlocksToEval=1
-      }else{
-        block[4]=null
-      }
-      blocks[_registerCursor]=block;
-      registerBudget--;
-      _registerCursor++
-    }
-    _BM.phase=(_registerCursor>=blocksNum)<<1|_hasAnyBlocksToEval^1
-  };
-  let execute=()=>{
+  _BM.executeBlockData=()=>{
     let blocks=_BM.blocks,
     errors=_BM.errors,
-    blocksNum=blocks.length,
-    executionBudget=_maxExecutions;
-    while(_executionCursor<blocksNum&executionBudget>0){
-      let block=blocks[_executionCursor];
-      if(!block[3]){
-        _executionCursor++;
+    budget=_maxExecutionsPerTick,
+    blocksCount=blocks.length,
+    block,x,y,z,code;
+    while(_blockIndex<blocksCount){
+      block=blocks[_blockIndex];
+      if(!block||block.length<3){
+        _blockIndex++;
         continue
       }
-      let x=block[0],
-      y=block[1],
+      x=block[0];
+      y=block[1];
       z=block[2];
-      if(block[4]==="Unloaded"){
-        let blockName=api.getBlock(x,y,z);
-        if(blockName==="Unloaded"){
-          break
-        }
-        block[4]=blockName
+      if((block[3]=api_getBlock(x,y,z))==="Unloaded"){
+        return
       }
+      code=api_getBlockData(x,y,z)?.persisted?.shared?.text;
       try{
-        let code=api.getBlockData(x,y,z)?.persisted?.shared?.text;
         (0,eval)(code)
       }catch(error){
-        _errorCursor++;
-        errors[_errorCursor*+(errors.length-1<_maxErrors)]=[x,y,z,error.name,error.message]
+        _errorIndex++;
+        errors[_errorIndex*+(errors.length-1<_maxErrorsCount)]=[error.name,error.message,x,y,z]
       }
-      executionBudget--;
-      _executionCursor++
+      _blockIndex++;
+      budget--;
+      if(budget<=0){
+        return
+      }
     }
-    _BM.phase=2|_executionCursor>=blocksNum
+    _BM.phase=1
   };
-  _BM.init=()=>{
-    if(_BM.phase<2){return register()}
-    if(_BM.phase===2){execute()}
+  _BM.executeStorageData=()=>{
+    let errors=_BM.errors;
+    if(!_BM.registryLoaded){
+      let registryPosition=_BM.blocks[0];
+      if(!registryPosition||registryPosition.length<3){
+        _BM.phase=1;
+        return
+      }
+      if(api_getBlockId(registryPosition[0],registryPosition[1],registryPosition[2])===1){
+        return
+      }
+      _registryItems=api_getStandardChestItems(registryPosition);
+      if(!_registryItems[0]?.attributes?.customAttributes?.region){
+        _BM.phase=1;
+        return
+      }
+      _BM.registryLoaded=!0
+    }
+    let budget=_maxExecutionsPerTick,
+    registryItem,coordsList,coordsLength,x,y,z,storageItems,code,storageSlotBaseIndex,chunkIndex,storageItem;
+    while(registryItem=_registryItems[_registrySlotIndex]){
+      coordsList=registryItem.attributes.customAttributes._;
+      coordsLength=coordsList.length-2;
+      while(_coordsIndex<coordsLength){
+        x=coordsList[_coordsIndex];
+        y=coordsList[_coordsIndex+1];
+        z=coordsList[_coordsIndex+2];
+        if(api_getBlockId(x,y,z)===1){
+          return
+        }
+        storageItems=api_getStandardChestItems([x,y,z]);
+        while(_partition<4){
+          code="";
+          storageSlotBaseIndex=_partition*9;
+          chunkIndex=0;
+          while(chunkIndex<9&&(storageItem=storageItems[storageSlotBaseIndex+chunkIndex])){
+            code+=storageItem.attributes.customAttributes._;
+            chunkIndex++
+          }
+          try{
+            (0,eval)(code)
+          }catch(error){
+            _errorIndex++;
+            errors[_errorIndex*+(errors.length-1<_maxErrorsCount)]=[error.name,error.message,x,y,z,_partition]
+          }
+          _partition++;
+          budget--;
+          if(budget<=0){
+            return
+          }
+        }
+        _partition=0;
+        _coordsIndex+=3
+      }
+      _coordsIndex=0;
+      _registrySlotIndex++
+    }
+    _BM.phase=1
   };
   _BM.finalize=()=>{
     if(_finalized){
       return
     }
     _BM.errors[0]=null;
-    _isChunkLoaded=null;
+    _registryItems=null;
     _finalized=!0
-  };
-  _BM.isBlockLocked=position=>{
-    let x=position[0],
-    y=position[1],
-    z=position[2],
-    blockPositionId=(x|0)-(x<(x|0))+"|"+((y|0)-(y<(y|0)))+"|"+((z|0)-(z<(z|0)));
-    if(_blockLockedStatus[blockPositionId]!==!1){
-      return!_OM.isRunning
-    }
-    return !1
   }
-}  
+}
 {
-  let _OM=BootManager,
+  let _CF=configuration,
   _EM=EventManager,
   _TM=TickMultiplexer,
   _JM=JoinManager,
   _BM=BlockManager,
+  _OM=BootManager,
   _CL=CodeLoader,
-  _bootDelayTicks=0,
-  _showLoadTime=!0,
-  _showErrors=!0,
-  _showExecutedBlocks=!1,
+  _EMprefix=_PREFIX+" EM: ",
+  _BMprefix=_PREFIX+" BM: ",
+  _OMprefix=_PREFIX+" OM: ",
   _tickNum=-1,
-  _loadTimeTicks=-1;
-  _OM.logLoadTime=showErrors=>{
-    let errorsNum=_BM.errors.length-1,
-    logs="Code Loader: BootManager: Code was loaded in "+_loadTimeTicks*50+" ms";
-    if(errorsNum===0){
-      logs+=showErrors?" with 0 errors.":".";
-      api.broadcastMessage([{
-        str:logs,
-        style:_OM.logStyle.success??{}
-      }])
+  _bootDelayTicks,
+  _showBootLogs,
+  _showErrorLogs,
+  _showExecutionLogs,
+  _loadTimeTicks;
+  _OM.bootLogs=showErrors=>{
+    let message="Code was loaded in "+_loadTimeTicks*50+" ms",
+    errorsCount=_BM.errors.length-1;
+    if(showErrors){
+      message+=errorsCount>0?" with "+errorsCount+" error"+(errorsCount===1?"":"s")+".":" with 0 errors."
     }else{
-      logs+=showErrors?" with "+errorsNum+" error"+(errorsNum===1?"":"s")+".":".";
-      api.broadcastMessage([{
-        str:logs,
-        style:_OM.logStyle.warning??{}
-      }])
+      message+="."
     }
+    _log(_OMprefix+message,1+(errorsCount<=0))
   };
-  _OM.logExecutedBlocks=()=>{
-    let blocks=_BM.blocks,
-    blocksNum=blocks.length,
-    logs="",
-    count=0,
-    index=0;
-    while(index<blocksNum){
-      let block=blocks[index];
-      if(block[3]){
-        logs+='\n"'+block[4]+'" at ('+block[0]+", "+block[1]+", "+block[2]+")";
-        count++
-      }
-      index++
-    }
-    logs="Code Loader: BlockManager: Executed "+count+" block"+(count===1?"":"s")+":"+logs;
-    api.broadcastMessage([{
-      str:logs,
-      style:(_BM.errors.length-1?_OM.logStyle.warning:_OM.logStyle.success)??{}
-    }])
-  };
-  _OM.logErrors=()=>{
+  _OM.errorLogs=showSuccess=>{
     let errors=_BM.errors,
-    errorsNum=errors.length-1;
-    if(errorsNum>0){
-      let logs="Code Loader: BlockManager: Code execution error"+(errorsNum===1?"":"s")+":",
-      index=1;
-      while(index<=errorsNum){
-        let error=errors[index];
-        logs+="\n"+error[3]+" at ("+error[0]+", "+error[1]+", "+error[2]+"): "+error[4];
-        index++
+    errorsCount=errors.length-1;
+    if(errorsCount>0){
+      let message="Code execution error"+(errorsCount===1?"":"s")+":",
+      error;
+      if(_BM.isChestData){
+        for(let index=1;index<=errorsCount;index++){
+          error=errors[index];
+          message+="\n"+error[0]+" at ("+error[2]+", "+error[3]+", "+error[4]+") in partition ("+error[5]+"): "+error[1]
+        }
+      }else{
+        for(let index=1;index<=errorsCount;index++){
+          error=errors[index];message+="\n"+error[0]+" at ("+error[2]+", "+error[3]+", "+error[4]+"): "+error[1]
+        }
       }
-      api.broadcastMessage([{
-        str:logs,
-        style:_OM.logStyle.error??{}
-      }])
+      _log(_BMprefix+message,0)
+    }else if(showSuccess){
+      _log(_BMprefix+"No code execution errors.",2)
     }
   };
-  _OM.logBootResult=(showLoadTime,showErrors,showExecutedBlocks)=>{
+  _OM.executionLogs=()=>{
+    let blocks=_BM.blocks,
+    message="",
+    block;
+    if(_BM.isChestData){
+      if(_BM.registryLoaded){
+        block=blocks[0];
+        message="Executed storage data at ("+block[0]+", "+block[1]+", "+block[2]+")."
+      }else{
+        message="No storage data found."
+      }
+    }else{
+      let amount=0,
+      blocksCount=blocks.length;
+      for(let index=0;index<blocksCount;index++){
+        block=blocks[index];
+        if(block[3]){
+          message+='\n"'+block[3]+'" at ('+block[0]+", "+block[1]+", "+block[2]+")";
+          amount++
+        }
+      }
+      message="Executed "+amount+" block"+(amount===1?"":"s")+" data"+(amount===0?".":":")+message
+    }
+    _log(_BMprefix+message,3)
+  };
+  _OM.completeLogs=(showBoot,showErrors,showExecution)=>{
     if(_EM.unregisteredActiveEvents.length){
-      api.broadcastMessage([{
-        str:"Code Loader: EventManager: Unregistered active events: \""+_EM.unregisteredActiveEvents.join("\", \"")+"\".",
-        style:_OM.logStyle.warning??{}
-      }])
+      _log(_EMprefix+'Unregistered active events: "'+_EM.unregisteredActiveEvents.join('", "')+'".',1)
     }
     if(_EM.invalidActiveEvents.length){
-      api.broadcastMessage([{
-        str:"Code Loader: EventManager: Invalid active events: \""+_EM.invalidActiveEvents.join("\", \"")+"\".",
-        style:_OM.logStyle.warning??{}
-      }])
+      _log(_EMprefix+'Invalid active events: "'+_EM.invalidActiveEvents.join('", "')+'".',1)
     }
-    if(showLoadTime){
-      _OM.logLoadTime(showErrors)
-    }
-    if(showExecutedBlocks){
-      _OM.logExecutedBlocks()
+    if(showBoot){
+      _OM.bootLogs(showErrors)
     }
     if(showErrors){
-      _OM.logErrors()
+      _OM.errorLogs(!showBoot)
+    }
+    if(showExecution){
+      _OM.executionLogs()
     }
   };
   _OM.tick=()=>{
     _tickNum++;
     if(_OM.phase<6){
       if(_OM.phase===-2){
-        if(_OM.isPrimaryBoot&!_EM.isPrimarySetupDone&_tickNum>20){
+        if(_OM.isPrimaryBoot&&!_EM.isPrimarySetupDone&&_tickNum>20){
           let criticalError=_EM.primarySetupError,
-          logs=`Code Loader: EventManager: ${criticalError===null?"Undefined e":"E"}rror on events primary setup${criticalError===null?".":` - ${criticalError[0]}: ${criticalError[1]}.`}`,
-          playerIds=api.getPlayerIds();
-          for(let playerId of playerIds){
+          message=_EMprefix+"Error on primary setup - "+criticalError?.[0]+": "+criticalError?.[1]+".",
+          playerIds=api.getPlayerIds(),
+          index=0,
+          playerId;
+          while(playerId=playerIds[index]){
             if(api.checkValid(playerId)){
-              api.kickPlayer(playerId,logs)
+              api.kickPlayer(playerId,message)
             }
+            index++
           }
         }
         return
       }
       if(_OM.phase===0){
         _tickNum=0;
-        let thisConfig=Configuration.boot_manager;
+        let thisConfig=_CF.boot_manager;
         _bootDelayTicks=(thisConfig.boot_delay_ms|0)*.02|0;
         _bootDelayTicks=_bootDelayTicks&~(_bootDelayTicks>>31);
-        _showLoadTime=!!thisConfig.show_load_time;
-        _showErrors=!!thisConfig.show_errors;
-        _showExecutedBlocks=!!thisConfig.show_executed_blocks;
-        _OM.logStyle={
-          error:Object.assign({},Configuration.LOG_STYLE.error),
-          warning:Object.assign({},Configuration.LOG_STYLE.warning),
-          success:Object.assign({},Configuration.LOG_STYLE.success)
-        };
+        _showBootLogs=!!thisConfig.show_boot_logs;
+        _showErrorLogs=!!thisConfig.show_error_logs;
+        _showExecutionLogs=!!thisConfig.show_execution_logs;
         _loadTimeTicks=-1;
         _EM.established=!1;
         _TM.established=!1;
@@ -885,22 +873,27 @@ NOOP=function(){};
       }
       if(_OM.phase===4){
         if(_EM.isEventActive.onPlayerJoin){
-          _JM.bufferPlayers();
-          _JM.install()
+          _JM.install();
+          _JM.bufferPlayers()
         }
         _TM.install();
         _OM.phase=5
       }
       if(_OM.phase===5){
-        _TM.init=_BM.init;
+        if(_BM.isChestData){
+          _TM.init=_BM.executeStorageData
+        }else{
+          _TM.init=_BM.executeBlockData
+        }
         _OM.phase=6;
         return
       }
     }
     if(_OM.phase===6){
-      if(_BM.phase===3){
+      if(_BM.phase===1){
         _BM.finalize();
-        _OM.phase=6+1+!_EM.isEventActive.onPlayerJoin
+        _BM.phase=-1;
+        _OM.phase=7+!_EM.isEventActive.onPlayerJoin
       }
     }
     if(_OM.phase===7){
@@ -911,79 +904,326 @@ NOOP=function(){};
     }
     if(_OM.phase===8){
       _TM.finalize();
-      _BM.phase=4;
       _CL.isPrimaryBoot=_OM.isPrimaryBoot=!1;
       _CL.isRunning=_OM.isRunning=!1;
       _OM.phase=-1;
       _loadTimeTicks=_tickNum-_bootDelayTicks+1;
-      _OM.logBootResult(_showLoadTime,_showErrors,_showExecutedBlocks)
+      _OM.completeLogs(_showBootLogs,_showErrorLogs,_showExecutionLogs)
     }
   }
 }
 {
-  let _CL=CodeLoader,
-  _EM=EventManager,
-  _BM=BlockManager,
-  _OM=BootManager;
-  _CL.configuration=Configuration;
-  _CL.isBlockLocked=position=>{
-    return position instanceof Array&&position.length===3&&_BM.isBlockLocked(position)
+  let _SM=StorageManager,
+  _SMprefix=_PREFIX+" SM: ",
+  api_setBlock=api.setBlock,
+  api_getBlockData=api.getBlockData,
+  api_getStandardChestItems=api.getStandardChestItems,
+  api_setStandardChestItemSlot=api.setStandardChestItemSlot,
+  _taskQueue=[],
+  _taskIndex=0,
+  _taskPhase=1,
+  _blockType="Bedrock",
+  _itemType="Boat",
+  _storageItemData={customAttributes:{_:null}},
+  _registryItemData={customAttributes:{_:[]}},
+  _storageCoordsBuffer=_registryItemData.customAttributes._,
+  _dataChunksBuffer=[],
+  _storageX,
+  _storageY,
+  _storageZ,
+  _blockIndex,
+  _partition,
+  _storagePosition,
+  _registrySlotIndex,
+  _coordsList,
+  _coordsIndex,
+  _coordsLength;
+  let _build=(blocks,registryPosition,lowX,lowY,lowZ,highX,highY,highZ,maxStorageUnitsPerTick)=>{
+    let x=_storageX,
+    y=_storageY,
+    z=_storageZ;
+    if(_taskPhase===1){
+      _storageX=x=lowX;
+      _storageY=y=lowY;
+      _storageZ=z=lowZ;
+      _blockIndex=0;
+      _registrySlotIndex=1;
+      _coordsLength=0;
+      _taskPhase=2
+    }
+    let budget=maxStorageUnitsPerTick,
+    blocksCount=blocks.length,
+    rawData,rawStart,rawEnd,escapedData,escapedCursor,escapedDataEnd,escapedChunkEnd,backslashPosition,runLength,
+    block,storageSlotBaseIndex,chunkIndex,chunksLength;
+    while(_blockIndex<blocksCount){
+      if(_taskPhase===2){
+        x++;
+        if(x>highX){
+          x=lowX;
+          z++;
+          if(z>highZ){
+            z=lowZ;
+            y++
+          }
+        }
+        api_setBlock(x,y,z,_blockType);
+        _storageX=x;
+        _storageY=y;
+        _storageZ=z;
+        _partition=0;
+        _storagePosition=[x,y,z];
+        _taskPhase=3
+      }
+      while(_partition<4&&_blockIndex<blocksCount){
+        if(_taskPhase===3){
+          block=blocks[_blockIndex];
+          rawData=api_getBlockData(block[0],block[1],block[2])?.persisted?.shared?.text;
+          if(rawData?.length>0){
+            chunkIndex=0;
+            rawStart=0;
+            rawEnd=0;
+            escapedData=JSON.stringify(rawData);
+            escapedCursor=1;
+            escapedDataEnd=escapedData.length-1;
+            while(escapedCursor<escapedDataEnd){
+              escapedChunkEnd=escapedCursor+1950;
+              if(escapedChunkEnd>escapedDataEnd){
+                escapedChunkEnd=escapedDataEnd
+              }
+              escapedChunkEnd-=escapedData[escapedChunkEnd-1]==="\\";
+              while(escapedCursor<escapedChunkEnd){
+                backslashPosition=escapedData.indexOf("\\",escapedCursor);
+                if(backslashPosition===-1||backslashPosition>=escapedChunkEnd){
+                  runLength=escapedChunkEnd-escapedCursor;
+                  escapedCursor+=runLength;
+                  rawEnd+=runLength;
+                  break
+                }
+                if(backslashPosition>escapedCursor){
+                  runLength=backslashPosition-escapedCursor;
+                  escapedCursor+=runLength;
+                  rawEnd+=runLength
+                }
+                escapedCursor+=2;
+                rawEnd+=1
+              }
+              _dataChunksBuffer[chunkIndex++]=rawData.slice(rawStart,rawEnd);
+              rawStart=rawEnd
+            }
+            _dataChunksBuffer.length=chunkIndex;
+            _taskPhase=4
+          }
+        }
+        if(_taskPhase===4){
+          storageSlotBaseIndex=_partition*9;
+          chunkIndex=0;
+          chunksLength=_dataChunksBuffer.length;
+          while(chunkIndex<chunksLength){
+            _storageItemData.customAttributes._=_dataChunksBuffer[chunkIndex];
+            api_setStandardChestItemSlot(_storagePosition,storageSlotBaseIndex+chunkIndex,_itemType,null,void 0,_storageItemData);
+            chunkIndex++
+          }
+          _partition++;
+          _taskPhase=3
+        }
+        _blockIndex++
+      }
+      if(_coordsLength>=243){
+        api_setStandardChestItemSlot(registryPosition,_registrySlotIndex,_itemType,null,void 0,_registryItemData);
+        _registrySlotIndex++;
+        _storageCoordsBuffer.length=0;
+        _coordsLength=0
+      }
+      _storageCoordsBuffer[_coordsLength++]=x;
+      _storageCoordsBuffer[_coordsLength++]=y;
+      _storageCoordsBuffer[_coordsLength++]=z;
+      _taskPhase=2;
+      budget--;
+      if(budget<=0){
+        return !1
+      }
+    }
+    api_setStandardChestItemSlot(registryPosition,_registrySlotIndex,_itemType,null,void 0,_registryItemData);
+    _storageItemData.customAttributes._=null;
+    _storageCoordsBuffer.length=0;
+    _dataChunksBuffer.length=0;
+    _storagePosition=null;
+    _log(_SMprefix+"Built storage at ("+registryPosition[0]+", "+registryPosition[1]+", "+registryPosition[2]+").",2);
+    _taskPhase=1;
+    return !0
   };
+  let _dispose=(registryPosition,registryItems,maxStorageUnitsPerTick)=>{
+    if(_taskPhase===1){
+      _registrySlotIndex=1;
+      _coordsIndex=0;
+      _taskPhase=2
+    }
+    let budget=maxStorageUnitsPerTick,
+    registryItem;
+    while(registryItem=registryItems[_registrySlotIndex]){
+      if(_taskPhase===2){
+        _coordsList=registryItem.attributes.customAttributes._;
+        _coordsIndex=0;
+        _coordsLength=_coordsList.length;
+        _taskPhase=3
+      }
+      if(_taskPhase===3){
+        while(_coordsIndex<_coordsLength){
+          api_setBlock(_coordsList[_coordsIndex],_coordsList[_coordsIndex+1],_coordsList[_coordsIndex+2],"Air");
+          _coordsIndex+=3;
+          budget--;
+          if(budget<=0){
+            return !1
+          }
+        }
+        api_setStandardChestItemSlot(registryPosition,_registrySlotIndex,"Air");
+        _registrySlotIndex++;
+        _taskPhase=2
+      }
+    }
+    _log(_SMprefix+"Disposed storage at ("+registryPosition[0]+", "+registryPosition[1]+", "+registryPosition[2]+").",2);
+    _taskPhase=1;
+    return !0
+  };
+  _SM.create=(lowPosition,highPosition)=>{
+    let lowX=lowPosition[0],
+    lowY=lowPosition[1],
+    lowZ=lowPosition[2],
+    highX=highPosition[0],
+    highY=highPosition[1],
+    highZ=highPosition[2];
+    if(lowX>highX||lowY>highY||lowZ>highZ){
+      _log(_SMprefix+"Invalid region bounds. lowPos must be <= highPos on all axes.",1);
+      return
+    }
+    api_setBlock(lowX,lowY,lowZ,_blockType);
+    api_setStandardChestItemSlot(lowPosition,0,_itemType,null,void 0,{
+      customAttributes:{
+        region:[lowX,lowY,lowZ,highX,highY,highZ]
+      }
+    });
+    _log(_SMprefix+"Registry unit created at ("+lowX+", "+lowY+", "+lowZ+").",2)
+  };
+  _SM.check=registryPosition=>{
+    let registryItems=api_getStandardChestItems(registryPosition),
+    region=registryItems[0]?.attributes?.customAttributes?.region;
+    if(!region){
+      _log(_SMprefix+"No valid registry unit found.",1)
+    }else{
+      _log(_SMprefix+"Storage covers region from ("+region[0]+", "+region[1]+", "+region[2]+") to ("+region[3]+", "+region[4]+", "+region[5]+").",3)
+    }
+  };
+  _SM.build=(registryPosition,blocks,maxStorageUnitsPerTick=16)=>{
+    let registryItems=api_getStandardChestItems(registryPosition),
+    region=registryItems[0]?.attributes?.customAttributes?.region;
+    if(!region){
+      _log(_SMprefix+"No valid registry unit found.",1);
+      return
+    }
+    let lowX=region[0],
+    lowY=region[1],
+    lowZ=region[2],
+    highX=region[3],
+    highY=region[4],
+    highZ=region[5],
+    capacity=(highX-lowX+1)*(highY-lowY+1)*(highZ-lowZ+1),
+    required=blocks.length+7>>2;
+    if(capacity<required){
+      _log(_SMprefix+"Not enough space. Need "+required+" storage units, but region holds "+capacity+".",0)
+    }else{
+      _taskQueue[_taskQueue.length]=()=>_build(blocks,registryPosition,lowX,lowY,lowZ,highX,highY,highZ,maxStorageUnitsPerTick)
+    }
+  };
+  _SM.dispose=(registryPosition,maxStorageUnitsPerTick=32)=>{
+    let registryItems=api_getStandardChestItems(registryPosition);
+    if(!registryItems[0]?.attributes?.customAttributes?.region){
+      _log(_SMprefix+"No valid registry unit found.",1)
+    }else{
+      _taskQueue[_taskQueue.length]=()=>_dispose(registryPosition,registryItems,maxStorageUnitsPerTick)
+    }
+  };
+  _SM.tick=()=>{
+    let tasksCount=_taskQueue.length;
+    if(tasksCount){
+      let isActive=_taskIndex<tasksCount;
+      while(isActive){
+        try{
+          if(!_taskQueue[_taskIndex]()){
+            break
+          }
+        }catch(error){
+          _log(_SMprefix+"Task error on tick - "+error.name+": "+error.message,0)
+        }
+        isActive=++_taskIndex<tasksCount
+      }
+      if(!isActive){
+        _taskIndex=0;
+        _taskQueue.length=0
+      }
+    }
+  }
+}
+{
+  let _EM=EventManager,
+  _OM=BootManager,
+  _CL=CodeLoader,
+  _OMprefix=_PREFIX+" OM: ";
+  _CL.SM=StorageManager;
+  _CL.config=configuration;
   _CL.reboot=()=>{
     if(!_OM.isRunning){
       _EM.delegator.tick=_OM.tick;
       _OM.phase=0
     }else{
-      api.broadcastMessage([{
-        str:"Code Loader: BootManager: Wait until current running boot session is finished.",
-        style:_OM.logStyle.warning??{}
-      }])
+      _log(_OMprefix+"Reboot request was denied.",1)
     }
   };
-  _CL.logBootResult=(showLoadTime=!0,showErrors=!0,showExecutedBlocks=!1)=>{
-    _OM.logBootResult(showLoadTime,showErrors,showExecutedBlocks)
+  _CL.bootLogs=(showErrors=!0)=>{
+    _OM.bootLogs(showErrors)
   };
-  _CL.logLoadTime=(showErrors=!0)=>{
-    _OM.logLoadTime(showErrors)
+  _CL.errorLogs=(showSuccess=!0)=>{
+    _OM.errorLogs(showSuccess)
   };
-  _CL.logErrors=()=>{
-    _OM.logErrors()
+  _CL.executionLogs=()=>{
+    _OM.executionLogs()
   };
-  _CL.logExecutedBlocks=()=>{
-    _OM.logExecutedBlocks()
-  }
-}
-{
-  let delegator=EventManager.delegator;
-  delegator.tick=BootManager.tick;
-  globalThis.tick=function(){
-    delegator.tick()
+  _CL.completeLogs=(showBoot=!0,showErrors=!0,showExecution=!1)=>{
+    _OM.completeLogs(showBoot,showErrors,showExecution)
   }
 }
 try{
+  let _SM=StorageManager,
+  _delegator=EventManager.delegator;
+  _delegator.tick=BootManager.tick;
+  globalThis.tick=function(){
+    _delegator.tick(50);
+    _SM.tick()
+  };
   EventManager.primarySetup();
-  let toSeal=[
-    Configuration,
-    Configuration.boot_manager,
-    Configuration.block_manager,
-    Configuration.join_manager,
-    Configuration.event_manager,
-    Configuration.LOG_STYLE,
-    InterruptionFramework,
-    EventManager,
-    TickMultiplexer,
-    JoinManager,
-    BlockManager,
-    BootManager,
-    CodeLoader
-  ],
-  toSealNum=toSeal.length,
-  index=0;
-  while(index<toSealNum){
-    Object.seal(toSeal[index]);
-    index++
+  let configStyles=configuration.STYLES,
+  logStyles=_log.STYLES=[];
+  for(let type=0;type<4;type++){
+    logStyles[type]=[{
+      str:"",
+      style:{
+        color:configStyles[type*3],
+        fontWeight:configStyles[type*3+1],
+        fontSize:configStyles[type*3+2]
+      }
+    }]
   }
-  Object.freeze(Configuration.EVENT_REGISTRY);
+  let seal=Object.seal,
+  freeze=Object.freeze;
+  seal(configuration);
+  seal(configuration.boot_manager);
+  seal(configuration.block_manager);
+  seal(configuration.join_manager);
+  seal(configuration.event_manager);
+  freeze(configuration.EVENT_REGISTRY);
+  freeze(configuration.STYLES);
+  seal(InterruptionFramework);
+  freeze(StorageManager);
+  seal(CodeLoader);
   EventManager.isPrimarySetupDone=!0;
   BootManager.phase=0
 }catch(error){

@@ -1,59 +1,85 @@
+
 ---
 
 <div align="center">
-
-<h1>Code Loader</h1>
-
-<p>
-Automatically boot your world code in deterministic phases, ensure target chunks are loaded, </br>
-while executing (evaluating) the code stored in your blocks data (<code>persisted.shared.text</code>).<br/>
-Built-in <code>Join Manager</code> buffers <code>onPlayerJoin</code> calls during the boot session and correctly applies them.<br/>
-It has built-in <a href="https://github.com/delfineonx/interruption-framework"><code>Interruption Framework</code></a> (used to provide strong interruption safety for selected events on setup).
-</p>
-
-<p>
-  <a href="#installation"><kbd>Installation</kbd></a>
-  &nbsp;•&nbsp; <a href="#quick-start"><kbd>Quick Start</kbd></a>
-  &nbsp;•&nbsp; <a href="#configuration"><kbd>Configuration</kbd></a>
-  &nbsp;•&nbsp; <a href="#code-loader-api"><kbd>Code Loader API</kbd></a>
-  &nbsp;•&nbsp; <a href="#example"><kbd>Example</kbd></a>
-  &nbsp;•&nbsp; <a href="#features"><kbd>Features</kbd></a>
-  &nbsp;•&nbsp; <a href="#troubleshooting"><kbd>Troubleshooting</kbd></a>
-</p>
-
+  <h1>Code Loader</h1>
+  <p>
+    Automatically boot your world code, ensure target chunks are loaded,<br>
+    and execute code stored as <code>block data</code> or <code>chest data</code>.<br>
+    Built-in <code>StorageManager</code> provides an easy workflow for moving code into chest storage.<br>
+    Built-in <a href="https://github.com/delfineonx/interruption-framework"><code>Interruption Framework</code></a> optionally provides interruption-safe event execution.
+  </p>
+  <p>
+    <a href="#installation"><kbd>Installation</kbd></a> &nbsp;•&nbsp;
+    <a href="#quick-start"><kbd>Quick Start</kbd></a> &nbsp;•&nbsp;
+    <a href="#api-methods"><kbd>API Methods</kbd></a> &nbsp;•&nbsp;
+    <a href="#configuration"><kbd>Configuration</kbd></a> &nbsp;•&nbsp;
+    <a href="#storage-manager"><kbd>Storage Manager</kbd></a> &nbsp;•&nbsp;
+    <a href="#storage-format"><kbd>Storage Format</kbd></a> &nbsp;•&nbsp;
+    <a href="#features"><kbd>Features</kbd></a> &nbsp;•&nbsp;
+    <a href="#example"><kbd>Example</kbd></a> &nbsp;•&nbsp;
+    <a href="#troubleshooting"><kbd>Troubleshooting</kbd></a>
+  </p>
 </div>
 
 ---
 
 <a id="installation"></a>
+<details open>
+  <summary>
+    <div align="center">
+      <h2>❮ <code><b>📥 Installation 📥</b></code> ❯</h2>
+    </div>
+  </summary>
 
-## 📦 Installation
+  <p>
+    Copy the loader source code entirely into your real <code>World Code</code>.<br>
+  </p>
 
-Copy the loader source code entirely into your real <code>World Code</code>.<br/>
+  <h3>
+    <a href="https://github.com/delfineonx/block-code-loader/blob/main/src/code_loader_minified.js">
+      <code><b>minified version</b></code>
+    </a>
+  </h3>
 
-* [`Minified version`](https://github.com/delfineonx/block-code-loader/blob/main/src/code_loader_minified.js)
+  <blockquote>
+    <p>
+      <code><b>! NOTE</b></code><br>
+      The loader self-boots on world code init / lobby start.<br>
+      You may define extra non-event functions and objects right after the loader source code (below it).
+    </p>
+  </blockquote>
 
-<h6>- It self‑boots on the lobby start/creation.<br/>
-- If you want, you may put some non-event (not in-game callback) functions or other objects right after the loader source code, if there is some free space in your real <code>World Code</code>.</h6>
+</details>
 
 ---
 
 <a id="quick-start"></a>
+<details open>
+  <summary>
+    <div align="center">
+      <h2>❮ <code><b>⚡ Quick Start ⚡</b></code> ❯</h2>
+    </div>
+  </summary>
 
-## ⚡ Quick Start
+  <div align="left">
+    <h3>〔 <code><b>Setup</b></code> 〕</h3>
+  </div>
 
-Inside real <code>World Code</code>: List the events you will use (their order doesn't matter) and list your blocks positions (their order does matter).</br>
+  <p>Inside your real <code>World Code</code>:</p>
+  <ul>
+    <li>add event names to <code>ACTIVE_EVENTS</code></li>
+    <li>add code block positions to <code>BLOCKS</code></li>
+  </ul>
 
 ```js
 // ---------- EXAMPLE ----------
-const Configuration = {
+const configuration = {
   ACTIVE_EVENTS: [
     "tick",
-    "onPlayerJump",
-    "onPlayerChat",
     "onPlayerJoin",
-    "onPlayerLeave",
-    "onRespawnRequest",
+    "onPlayerChat",
+    "onPlayerJump",
     // ...
   ],
   BLOCKS: [
@@ -63,15 +89,40 @@ const Configuration = {
     [8, 2, 2],
     // ...
   ],
-  // other things remain unchanged ...
+  // other fields remain unchanged
 };
 ```
 
-Inside your specified blocks: distribute the world code as you need (it has almost no difference in comparison to real <code>World Code</code>).</br>
-Remember that each block makes its own scope ([`closure`](https://javascript.info/closure)). So you might need to modify declarations of "global" variables in your previous "world code". If they were declared with <code>const</code> or <code>let</code>, then change to one of these:
-- <code>globalThis.variableName</code> (explicit - recommended)
-- <code>variableName</code> (implicit)
-- <code>var variableName</code> (implicit)
+  <p>
+    Distribute your world code among the specified blocks as needed (it has almost no difference in comparison to real <code>World Code</code>).<br>
+    Remember that each block runs in its own scope (<a href="https://javascript.info/closure"><code>closure</code></a>).
+  </p>
+
+  <div align="left">
+    <h3>〔 <code><b>Variables</b></code> 〕</h3>
+  </div>
+
+  <p>If your "global" variables were declared with <code>const</code> or <code>let</code> in real <code>World Code</code>, then switch to one of these:</p>
+  <ul>
+    <li><code>globalThis.variableName = ...</code> <sub>(explicit, recommended)</sub></li>
+    <li><code>variableName = ...</code> <sub>(implicit)</sub></li>
+    <li><code>var variableName = ...</code> <sub>(implicit)</sub></li>
+  </ul>
+
+  <div align="left">
+    <h3>〔 <code><b>Event Handlers</b></code> 〕</h3>
+  </div>
+
+  <p>
+    Prefer assigning functions to globals (properties on <code>globalThis</code>).<br>
+    Avoid <ins>named function declarations</ins> for callbacks, because when the loader rewires handlers manually (not after world code init), such declarations can behave unexpectedly.
+  </p>
+
+  <ul>
+    <li><code>✔️ eventName = (...args) =&gt; { ... };</code></li>
+    <li><code>✔️ eventName = function (...args) { ... };</code></li>
+    <li><code>❌ function eventName(...args) { ... }</code> <sub>(not recommended)</sub></li>
+  </ul>
 
 ```js
 // ---------- EXAMPLE ----------
@@ -79,397 +130,950 @@ tick = () => { }; // (2, 2, 2)
 onPlayerJump = (playerId) => { }; // (4, 2, 2)
 onPlayerChat = function (playerId, chatMessage, channelName) { }; // (6, 2, 2)
 onPlayerJoin = function (playerId, fromGameReset) { }; // (8, 2, 2)
-onPlayerLeave = function (playerId, serverIsShuttingDown) { }; // (8, 2, 2)
-onRespawnRequest = (playerId) => { }; // (8, 2, 2)
+// ...
 ```
 
-Recommended to use anonymous or arrow function expressions assigned to global variables (globalThis) with names of corresponding events (callbacks). Function declarations with names of events (in-game callbacks) may lead sometimes to unexpected behaviour.</br>
-✔️ <code>callbackName = function (...) {...};</code></br>
-✔️ <code>callbackName = (...) => {...};</code></br>
-⚠️ <code>function callbackName(...) {...}</code> (not recommended)</br>
+  <div align="left">
+    <h3>〔 <code><b>Guard Pattern</b></code> 〕</h3>
+  </div>
+
+  <p>
+    If you want to prevent manual execution when a player clicks the code block, wrap the content with <code>if (myId === null) { ... }</code>.<br>
+    This makes such code to be possible to execute only during loader boot process.<br>
+  </p>
+
+</details>
 
 ---
 
-<a id="configuration"></a>
+<a id="api-methods"></a>
+<details open>
+  <summary>
+    <div align="center">
+      <h2>❮ <code><b>📚 API Methods 📚</b></code> ❯</h2>
+    </div>
+  </summary>
 
-## 🛠️ Configuration
+  <div align="left">
+    <h3>〔 <code><b>Code Loader</b></code> 〕</h3>
+  </div>
 
-Almost all configuration properties are <ins>sealed</ins> (<code>EVENT_REGISTRY</code> is frozen right on world code init). You can change existing values by keys anytime, then call <code>CL.reboot()</code>.</br>
-You cannot add or delete properties (prevents accidental shape changes).</br>
-Do not remove configuration properties (or their values in particular cases) from real <code>World Code</code> unless it is allowed (mentioned) in this documentation.
-
-```js
-const Configuration = {
-  ACTIVE_EVENTS: [ ... ],
-  BLOCKS: [ ... ],
-  boot_manager: { ... },
-  join_manager: { ... },
-  block_manager: { ... },
-  event_manager: { ... },
-  EVENT_REGISTRY: { ... },
-  LOG_STYLE: { error: { ... }, warning: { ... }, success: { ... } }
-};
-```
-
-<h3>〔 <code><b>ACTIVE_EVENTS</b></code> 〕</h3> 
-Events list (in-game callbacks) the loader should wire up (recommendation: include only those, which you are going to use).</br>
-
-Array of such entries:
-- <code>"eventName"</code>.</br>
-  - <code>fallbackValue</code> is ommited (not specified) -- <code>EVENT_REGISTRY[eventName]</code> default fallback value is used.</br>
-- <code>["eventName", fallbackValue?]</code>.</br>
-  - fallback is <code>"undefined"</code> -- fallback value is set to <code>undefined</code>.</br>
-  - fallback omitted or <code>undefined</code> -- <code>EVENT_REGISTRY[eventName]</code> default fallback value is used.</br>
-  - fallback is <code>any other value</code> -- fallback value is set as provided.</br>
-
-For each <code>"eventName"</code> the loader ensures:</br>
-
-- The delegator with <code>eventName</code> exists (your handler function; default to no‑op if missing)</br>
-- Actual in-game <code>globalThis.eventName(...args)</code> returns delegator call of your handler function</br>
-
-Not listed events are ignored (no wrapper is created).</br>
-You can change `ACTIVE_EVENTS` completety (shuffle entries, replace arrays with strings and vise versa, or even put a new array in place of `ACTIVE_EVENTS`) anytime, and then call <code>CL.reboot()</code>. Though this actions will only change events fallback values on reboot. As far as events (in-game callbacks) are wired up on world code init, you can change themselves only inside real <code>World Code</code>.
-
-<h3>〔 <code><b>BLOCKS</b></code> 〕</h3> 
-
-Array of such entries: <code>[x, y, z, lockedStatus?, executionStatus?]</code>.</br>
-Coordinates are integer‑floored internally. <code>lockedStatus</code> and <code>executionStatus</code> are converted to booleans (if provided).</br>
-
-- <code><ins>lockedStatus</ins></code>:</br>
-  - <code>true</code> -- the block is considered "locked" by the loader.</br>
-  - <code>false</code> -- the block is considered "unlocked" by the loader.</br>
-  - omitted or <code>null</code> -- <code>block_manager.default_locked_status</code> is used.</br>
-- <code><ins>executionStatus</ins></code>:</br>
-  - <code>true</code> -- execute (evaluate) the block, once its chunk is loaded.</br>
-  - <code>false</code> -- block execution (evaluation) is skipped.</br>
-  - omitted or <code>null</code> -- <code>block_manager.default_execution_status</code> is used.</br>
-
-Coordinates are not limited by any number internally.</br>
-<code>lockedStatus = false</code> allows you to reinitialize everything under <code>!CL.isBlockLocked(position)</code> guard anytime when you execute (evaluate) data of the block.
-
-<h3>〔 <code><b>boot_manager</b></code> 〕</h3> 
-
-| Property | Type | Default | Description |
-|---|---:|---:|---|
-| `boot_delay_ms` | Number | `100` | Time to wait in milliseconds before the current boot session (main process) starts. Min number is 0 (i.e. immediately). Converted to ticks and floored. |
-| `show_load_time` | Boolean | `true` | Whether to broadcast the total load time after the boot session is finished. |
-| `show_executed_blocks` | Boolean | `false` | Whether to broadcast executed (evaluated) blocks with thier names and positions after the boot session is finished. |
-| `show_load_time` | Boolean | `true` | Whether to broadcast the total load time after the boot session is finished. |
-
-<h3>〔 <code><b>join_manager</b></code> 〕</h3> 
-
-| Property | Type | Default | Description |
-|---|---:|---:|---|
-| `reset_on_reboot` | Boolean | `true` | Whether to apply <code>onPlayerJoin</code> handler <ins>again</ins> (on reboot) for all currently online players, i.e. it will be called for each player even if it has been already called for them (processed) before. |
-| `max_dequeue_per_tick` | Number | `16` | Max `onPlayerJoin` handler entries (players) processed per tick during the boot session. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
-
-<h3>〔 <code><b>block_manager</b></code> 〕</h3> 
-
-| Property | Type | Default | Description |
-|---|---:|---:|---|
-| `default_locked_status` | Boolean | `true` | Default when block's entry `lockedStatus` is `null`/`undefined`. |
-| `default_execution_status` | Boolean | `true` | Default when block's entry `executionStatus` is `null`/`undefined`. |
-| `max_registrations_per_tick` | Number | `32` | Max blocks internally processed per tick during registration process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
-| `max_chunk_requests_per_tick` | Number | `8` | Max chunks processed (load requested) per tick during registration process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
-| `max_executions_per_tick` | Number | `16` | Max blocks executed (evaluated) per tick during execution (initializing) process. Min number is 1 (i.e. at least 1 per tick). Converted to integer and floored. |
-| `max_error_count` | Number | `32` | Max errors to retain and optionally broadcast. Min number is 0 (i.e. no errors are saved and none can be logged). Converted to integer and floored. |
-
-<h3>〔 <code><b>event_manager</b></code> 〕</h3> 
-
-| Property | Type | Default | Description |
-|---|---:|---:|---|
-| `is_interruption_framework_enabled` | Boolean | `false` | Master switch whether the framework is used for events primary setup. You can change it in the loader configuration only in real <code>World Code</code>. |
-| `default_retry_delay_ticks` | Number | `0` | Default when event's registry entry `delayTicks` is `null`/`undefined`. Min number is 0 (i.e. immediately -- on the same tick). Integer-floored. |
-| `default_retry_limit_ticks` | Number | `2` | Default when event's registry entry `limitTicks` is `null`/`undefined`. Min number is 1 (i.e. at least one retry of interrupted delegator/handler call). Integer-floored. |
-
-<h3>〔 <code><b>EVENT_REGISTRY</b></code> 〕</h3> 
-
-Map of <code>"eventName" -> [fallbackValue?, interruptionStatus?, delayTicks?, limitTicks?]</code> (or <code>"eventName" -> null</code>).</br>
-<code>interruptionStatus</code> is converted to boolean (if provided). <code>delayTicks</code>, <code>limitTicks</code> are integer-floored internally (if provided).</br>
-
-- <code><ins>fallbackValue</ins></code>:</br>
-  - Supported by Bloxd code API: <code>api.setCallbackValueFallback("eventName", fallbackValue) to set a default value to be returned by your callback code if it throws an error</code>.
-  - <code>any value</code> - default fallback value is set as provided (even when ommited - i.e. <code>undefined</code>).
-- <code><ins>interruptionStatus</ins></code>:</br>
-  - <code>true</code> -- the event delegator call is safely enqueued internally, and <ins>automatically</ins> dequeued if no interruption occurred during execution (also can be manually dequeued inside handler call before it will be <ins>automatically</ins> dequeued).</br>
-  - <code>false</code> -- the event is called normally, it does not take part in <code>Interruption Framework</code> processes.</br>
-  - omitted or <code>null</code> -- default <code>false</code> is used.</br>
-- <code><ins>delayTicks</ins></code>:</br>
-  - Initial delay before the first retry attempt for current saved data of this event after (interruption) - failed dequeue by <code>IF.state = 0</code>.</br>
-  - <code>number</code> -- interger-floored (truncated).</br>
-- <code><ins>limitTicks</ins></code>:</br>
-  - Retry attempts budget. When the budget is exhausted, the consecutive retries for current saved data of this event are ended (dropped).</br>
-  - <code>number</code> -- interger-floored (truncated).</br>
-
-Do not change event names in <code>EVENT_REGISTRY</code>.</br>
-You may remove in real <code>World Code</code> only those events from <code>EVENT_REGISTRY</code> which you do not use in <code>ACTIVE_EVENTS</code>.</br>
-You can change <code>EVENT_REGISTRY[eventName]</code> values in the loader configuration only in real <code>World Code</code>.</br>
-<code>tick</code> callback is special and does not have any setup for itself.
-
-<h3>〔 <code><b>LOG_STYLE</b></code> 〕</h3> 
-
-<code>StyledText</code> objects used by the loader to broadcast logs during and after the last boot session. You can change styles before the new boot session starts.
-
----
-
-<a id="code-loader-api"></a>
-
-## 📚 Code Loader API
-
-Global object <code>CL</code> has following:
+  <p><code>globalThis.CL</code> / <code>CL</code> exposes:</p>
 
 ```js
 /*
- * Accessor of `Configuration` object (sealed).
- * You may mutate existing values by keys (then call `reboot()`),
+ * Accessor of `Storage Manager` object (frozen).
+ */
+SM
+
+/*
+ * Accessor of `configuration` object (sealed).
+ * You may mutate existing keys (then call `CL.reboot()`),
  * but you cannot add or delete properties.
  */
-configuration
+config
 
 /*
- * Whether the current running boot session is "primary" - performed right after world code init.
- * `true` only during the "primary" boot; `false` after the "primary" boot finishes.
- * 
- * It can be useful when total boot time is long enough and
- * hence, particular actions in callbacks might depend on it.
+ * `true` while the current running boot session is "primary".
+ * (i.e. performed right after the world code init)
+ * `false` after the boot is finished.
  */
 isPrimaryBoot
 
 /*
- * Whether the boot session is currently running.
- * `true` only during the boot; `false` before the boot stats or after it finishes.
+ * `true` while the boot session is currently running.
+ * `false` after the boot is finished.
+ *
+ * It can be useful to resolve conflicts,
+ * when actions in callbacks depend on not initizalied states during boot.
  */
 isRunning
 
 /**
- * Floor coordinates and return the lock state of a block at `position`.
- * Behavior:
- *  - During boot session, ALWAYS returns `false` ("unlocked").
- *  - If the block was not registered (in `configuration.BLOCKS`) before the boot, it is considered as "locked".
- *
- * @param {[number, number, number]} position - [x, y, z]; non-arrays or invalid length are treated as "locked"
- * @returns {boolean}
- *   - `true` if "locked"
- *   - `false` if "unlocked"
- */
-isBlockLocked(position)
-
-/**
- * Start the new boot session using the current (last) configuration.
- * Broadcast warning if the boot session is already running.
- * Replaces `tick` with the boot manager tick dispatcher until the boot completes.
+ * Start a new boot session using the current (last) config.
+ * Broadcast warning if a boot session is already running.
  *
  * @returns {void}
  */
 reboot()
 
 /**
- * Broadcast summary of the last boot session.
+ * Broadcast load time and errors count of the last boot.
  *
- * @param {boolean} [showLoadTime = true]
- * @param {boolean} [showErrors = true]
- * @param {boolean} [showExecutedBlocks = false]
+ * @param {boolean} [showErrors = true] - Whether to show errors count.
  * @returns {void}
  */
-logBootResult(showLoadTime, showErrors, showExecutedBlocks)
+bootLogs(showErrors)
 
 /**
- * Broadcast the total load time in milliseconds of the last boot session.
+ * Broadcast collected execution (evaluation) errors from the last boot.
  *
- * @param {boolean} [showErrors = true] - Whether to show the errors count.
+ * @param {boolean} [showSuccess = true] - Whether to show log message in case of 0 errors.
  * @returns {void}
  */
-logLoadTime(showErrors)
+errorLogs(showSuccess)
 
 /**
- * Broadcast all executed (evaluated) blocks as `"[blockName]" at ([x], [y], [z])`
+ * Broadcast which blocks or storage were executed.
  *
  * @returns {void}
  */
-logExecutedBlocks()
+executionLogs()
 
-/**
- * Broadcast the collected execution (evaluation) errors from the last boot session.
+ /**
+ * Broadcast summary of the last boot:
+ * config issues + boot logs + errors + execution list.
  *
+ * @param {boolean} [showBootLogs = true]
+ * @param {boolean} [showErrorLogs = true]
+ * @param {boolean} [showExecutionLogs = false]
  * @returns {void}
  */
-logErrors()
+completeLogs(showBootLogs, showErrorLogs, showExecutionLogs)
 ```
 
-> **Tip**: Use <code>!CL.isBlockLocked(position)</code> in your blocks as a guard (condition block) to avoid unwanted execution/(re-)initialization of the code.
+  <div align="left">
+    <h3>〔 <code><b>Storage Manager</b></code> 〕</h3>
+  </div>
+
+  <p><code>globalThis.CL.SM</code> / <code>CL.SM</code> exposes:</p>
+
+```js
+/**
+ * Create a registry unit (chest-like container) and store region bounds in slot 0.
+ *
+ * @param {[number, number, number]} lowPosition - bottom left corner [x,y,z]
+ * @param {[number, number, number]} highPosition - top right corner [x,y,z]
+ * @returns {void}
+ */
+create(lowPosition, highPosition)
+
+/**
+ * Broadcast info from an existing registry unit.
+ *
+ * @param {[number, number, number]} registryPosition
+ * @returns {void}
+ */
+check(registryPosition)
+
+/**
+ * Convert code in blocks into chest storage inside the registered region.
+ * Task is queued to tick.
+ *
+ * @param {[number, number, number]} registryPosition
+ * @param {Array<[number, number, number]>} blocks
+ * @param {number} [maxStorageUnitsPerTick = 16]
+ * @returns {void}
+ */
+build(registryPosition, blocks, maxStorageUnitsPerTick)
+
+/**
+ * Remove all storage units and registry entries, but keep registry unit with slot 0.
+ * Task is queued to tick.
+ *
+ * @param {[number, number, number]} registryPosition
+ * @param {number} [maxStorageUnitsPerTick = 32]
+ * @returns {void}
+ */
+dispose(registryPosition, maxStorageUnitsPerTick = 32)
+
+/**
+ * Internal task processor.
+ * Called automatically by the loader each tick.
+ *
+ * @returns {void}
+ */
+tick()
+```
+
+</details>
 
 ---
 
-<a id="example"></a>
+<a id="configuration"></a>
+<details open>
+  <summary>
+    <div align="center">
+      <h2>❮ <code><b>🛠️ Configuration 🛠️</b></code> ❯</h2>
+    </div>
+  </summary>
 
-## 🧪 Example
+  <blockquote>
+    <p>
+      <h4><code><b>! INFO</b></code></h4>
+      <ul>
+        <li>Most config objects are <ins>sealed</ins> on world code init.</li>
+        <li><code>EVENT_REGISTRY</code> and <code>STYLES</code> are <ins>frozen</ins>.</li>
+        <li>You can change existing values by key and then call <code>CL.reboot()</code>.</li>
+        <li>You cannot add or remove properties (prevents accidental shape changes).</li>
+      </ul>
+    </p>
+  </blockquote>
 
-Download the file and paste it using <code>World Builder</code> at position <code>(0, 0, 0)</code>.</br>
-Copy the configuration and replace the old with a new one in your real <code>World Code</code>.</br>
+```js
+const configuration = {
+  ACTIVE_EVENTS: [ ... ],
+  BLOCKS: [ ... ],
+  boot_manager: { ... },
+  block_manager: { ... },
+  join_manager: { ... },
+  event_manager: { ... },
+  EVENT_REGISTRY: { ... },
+  STYLES: [ ... ],
+};
+```
 
-<div align="center">
-<h3> ⚙️ Basic setup ⚙️</br> </h3>
-</div>
+  <blockquote>
+    <p>
+      <h4><code><b>! IMPORTANT</b></code></h4>
+      Do not remove config properties (or their values in particular cases) from real <code>World Code</code> unless it is allowed in this documentation.
+    </p>
+  </blockquote>
 
-* [`Basic example .bloxdshem`](https://github.com/delfineonx/block-code-loader/blob/main/assets/basic_example.bloxdschem)
-* [`Basic configuration`](https://github.com/delfineonx/block-codel-oader/blob/main/assets/basic_configuration.js)
+  <div align="left">
+    <h3>〔 <code><b>ACTIVE_EVENTS</b></code> 〕</h3>
+  </div>
 
-<div align="center">
-<h3> ⚙️ Advanced setup ⚙️</br> </h3>
-</div>
-<h6>Includes usage cases of <code>Interruption Framework</code>, <code>!CL.isBlockLocked(position)</code> guard, and events fallback values.</h6>
+  <blockquote>
+    <p>
+      <h4><code><b>! INFO</b></code></h4>
+      <ul>
+        <li>Defines which in-game callbacks the loader wires and manages.</li>
+        <li><ins>Recommendation:</ins> include only events you actually use.</li>
+        <li><code>tick</code> callback is special (handled separately).</li>
+      </ul>
+    </p>
+  </blockquote>
 
-* [`Advanced example .bloxdshem`](https://github.com/delfineonx/block-code-loader/blob/main/assets/advanced_example.bloxdschem)
-* [`Advanced configuration`](https://github.com/delfineonx/block-code-loader/blob/main/assets/advanced_configuration.js)
+  <div align="left">
+    <h4>⊂ <code><b>Supported entries</b></code> ⊃</h4>
+  </div>
+
+  <ul>
+    <li>
+      <code>"eventName"</code>
+      <ul>
+        <li>uses default fallback from <code>EVENT_REGISTRY[eventName][0]</code></li>
+      </ul>
+    </li>
+    <li>
+      <code>["eventName", fallbackValue?]</code>
+      <ul>
+        <li><code>"undefined"</code> sets fallback value to actual <code>undefined</code></li>
+        <li>omitted / <code>undefined</code> uses registry fallback</li>
+        <li>any other value -- sets fallback directly as provided</li>
+      </ul>
+    </li>
+  </ul>
+
+  <div align="left">
+    <h4>⊂ <code><b>Event Wiring</b></code> ⊃</h4>
+  </div>
+
+  <ul>
+    <li>the loader creates <code>globalThis.eventName(...args)</code> wrappers</li>
+    <li>your handler is stored as a delegator: <code>EventManager.delegator[eventName]</code></li>
+    <li>the wrapper returns whatever your delegator returns</li>
+  </ul>
+
+  <blockquote>
+    <p>
+      <h4><code><b>! NOTE</b></code></h4>
+      <ul>
+        <li>Changing <code>ACTIVE_EVENTS</code> at runtime only affects fallback values setup on reboot.</li>
+        <li>Event wrapper installation is created on world init based on the initial list (i.e. can be changed only in real <code>World Code</code>).</li>
+      </ul>
+    </p>
+  </blockquote>
+
+  <div align="left">
+    <h3>〔 <code><b>BLOCKS</b></code> 〕</h3>
+  </div>
+
+  <blockquote>
+    <p>
+      <h4><code><b>! INFO</b></code></h4>
+      <ul>
+        <li>List of block positions that contain your stored code.</li>
+        <li>Each entry is <code>[x, y, z]</code> (use integers; numbers are not floored by the loader).</li>
+        <li>Invalid entries are ignored.</li>
+      </ul>
+    </p>
+  </blockquote>
+
+  <div align="left">
+    <h4>⊂ <code><b>Storage type</b></code> ⊃</h4>
+  </div>
+
+  <ul>
+    <li>
+      <code><b>block data</b></code>
+      <ul>
+        <li><code>block_manager.is_chest_data = false</code></li>
+        <li>execution order = order of entries in <code>BLOCKS</code></li>
+      </ul>
+    </li>
+    <li>
+      <code><b>chest data</b></code>
+      <ul>
+        <li><code>block_manager.is_chest_data = true</code></li>
+        <li><code>BLOCKS</code> should contain only one entry: <code>[registryX, registryY, registryZ]</code></li>
+        <li>execution order = storage order inside the registry (see <a href="#storage-format">Storage Format</a>)</li>
+      </ul>
+    </li>
+  </ul>
+
+  <div align="left">
+    <h3>〔 <code><b>boot_manager</b></code> 〕</h3>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th align="right">Type</th>
+        <th align="right">Default</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>boot_delay_ms</code></td>
+        <td align="right">Number</td>
+        <td align="right"><code>100</code></td>
+        <td>Delay (in milliseconds) before continuing with main processes of boot session. Min 0. Converted to ticks and floored.</td>
+      </tr>
+      <tr>
+        <td><code>show_boot_logs</code></td>
+        <td align="right">Boolean</td>
+        <td align="right"><code>true</code></td>
+        <td>Whether to broadcast load time and errors count after boot.</td>
+      </tr>
+      <tr>
+        <td><code>show_error_logs</code></td>
+        <td align="right">Boolean</td>
+        <td align="right"><code>true</code></td>
+        <td>Whether to broadcast collected execution (evaluation) errors after boot.</td>
+      </tr>
+      <tr>
+        <td><code>show_execution_logs</code></td>
+        <td align="right">Boolean</td>
+        <td align="right"><code>false</code></td>
+        <td>Whether to broadcast executed (evaluated) blocks/storage positions after boot.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div align="left">
+    <h3>〔 <code><b>join_manager</b></code> 〕</h3>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th align="right">Type</th>
+        <th align="right">Default</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>reset_on_reboot</code></td>
+        <td align="right">Boolean</td>
+        <td align="right"><code>true</code></td>
+        <td>Whether to re-process join for all online players on reboot (even if already processed).</td>
+      </tr>
+      <tr>
+        <td><code>max_dequeue_per_tick</code></td>
+        <td align="right">Number</td>
+        <td align="right"><code>16</code></td>
+        <td>Max players dequeued per tick during boot by <code>Join Manager</code>. Min 1. Integer-floored.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div align="left">
+    <h3>〔 <code><b>block_manager</b></code> 〕</h3>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th align="right">Type</th>
+        <th align="right">Default</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>is_chest_data</code></td>
+        <td align="right">Boolean</td>
+        <td align="right"><code>false</code></td>
+        <td>Whether to read and execute from chest storage (registry) instead of block data.</td>
+      </tr>
+      <tr>
+        <td><code>max_executions_per_tick</code></td>
+        <td align="right">Number</td>
+        <td align="right"><code>16</code></td>
+        <td>Max blocks (or storage partitions) executions per tick during boot. Min 1. Integer-floored.</td>
+      </tr>
+      <tr>
+        <td><code>max_errors_count</code></td>
+        <td align="right">Number</td>
+        <td align="right"><code>32</code></td>
+        <td>Max errors count to retain. Min 0. Integer-floored.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div align="left">
+    <h3>〔 <code><b>event_manager</b></code> 〕</h3>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th align="right">Type</th>
+        <th align="right">Default</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>is_framework_enabled</code></td>
+        <td align="right">Boolean</td>
+        <td align="right"><code>false</code></td>
+        <td>Master switch for using <code>Interruption Framework</code> for events setup (set only in real <code>World Code</code>).</td>
+      </tr>
+      <tr>
+        <td><code>default_retry_limit</code></td>
+        <td align="right">Number</td>
+        <td align="right"><code>2</code></td>
+        <td>Default retry budget when a registry entry omits <code>retryLimit</code>. Min 1. Integer-floored.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div align="left">
+    <h3>〔 <code><b>EVENT_REGISTRY</b></code> 〕</h3>
+  </div>
+
+  <blockquote>
+    <p>
+      <h4><code><b>! INFO</b></code></h4>
+      <ul>
+        <li>Map (object): <code>eventName -> [fallbackValue?, interruptionStatus?, retryLimit?]</code> or <code>null</code></li>
+        <li><code>fallbackValue</code> is applied via <code>api.setCallbackValueFallback(eventName, value)</code></li>
+        <li><code>interruptionStatus</code> is converted to boolean</li>
+        <li><code>retryLimit</code> is integer-floored and used only when framework is enabled</li>
+      </ul>
+    </p>
+  </blockquote>
+
+  <blockquote>
+    <p>
+      <h4><code><b>! NOTE</b></code></h4>
+      <ul>
+        <li>Do not rename keys inside <code>EVENT_REGISTRY</code> (keep valid callback names).</li>
+        <li>You may remove registry entries only for events you will never put into <code>ACTIVE_EVENTS</code>.</li>
+        <li>Registry values should be changed only in real <code>World Code</code>.</li>
+        <li><code>tick</code> is special and can be <code>null</code>.</li>
+      </ul>
+    </p>
+  </blockquote>
+
+  <div align="left">
+    <h3>〔 <code><b>STYLES</b></code> 〕</h3>
+  </div>
+
+  <blockquote>
+    <p>
+      <h4><code><b>! INFO</b></code></h4>
+      <ul>
+        <li>Flat array of <code>StyledText</code> values used for loader logs.</li>
+        <li>Format: <code>[color, fontWeight, fontSize, ...]</code> for 4 message types.</li>
+      </ul>
+    </p>
+  </blockquote>
+
+```js
+STYLES: [
+  "#FF775E", "500", "0.95rem", // error (type 0)
+  "#FFC23D", "500", "0.95rem", // warning (type 1)
+  "#20DD69", "500", "0.95rem", // success (type 2)
+  "#52B2FF", "500", "0.95rem", // info (type 3)
+]
+```
+
+</details>
+
+---
+
+<a id="storage-manager"></a>
+<details open>
+  <summary>
+    <div align="center">
+      <h2>❮ <code><b>🛡️ Storage Manager 🛡️</b></code> ❯</h2>
+    </div>
+  </summary>
+
+  <div align="left">
+    <h3>〔 <code><b>Purpose</b></code> 〕</h3>
+  </div>
+
+  <ul>
+    <li>Moves your code from block data into chest item attributes (impossible to steal).</li>
+    <li>Provides a deterministic "storage registry" so the loader can find and execute code later.</li>
+    <li>Can spread work across ticks to avoid interruption issues.</li>
+  </ul>
+
+  <div align="left">
+    <h3>〔 <code><b>Workflow</b></code> 〕</h3>
+  </div>
+
+```js
+// 1) Create a registry (defines region where storage units can be placed)
+CL.SM.create([lowX, lowY, lowZ], [highX, highY, highZ]);
+
+// 2) Build storage from your block list
+CL.SM.build([registryX, registryY, registryZ], [
+  [2, 2, 2],
+  [4, 2, 2],
+  [6, 2, 2],
+  [8, 2, 2],
+]);
+```
+
+```js
+// 3) Switch loader to chest mode
+
+// Either in real `World Code` (recommended)
+const configuration = {
+  // ...
+  BLOCKS: [
+    [registryX, registryY, registryZ]
+  ],
+  // ...
+  block_manager: {
+    is_chest_data: true,
+    // ...
+  },
+  // ...
+};
+
+// Or at runtime
+CL.config.block_manager.is_chest_data = true;
+CL.config.BLOCKS = [[registryX, registryY, registryZ]];
+CL.reboot();
+```
+
+  <div align="left">
+    <h3>〔 <code><b>Capacity</b></code> 〕</h3>
+  </div>
+
+  <p>
+    One storage unit stores up to 4 blocks (4 partitions).<br>
+    Therefore, required storage units: <code>Math.floor((blocks.length + 7) / 4)</code>.
+  </p>
+
+  <p>
+    Region capacity is the number of blocks inside the axis-aligned box: <code>(dx + 1) * (dy + 1) * (dz + 1)</code>.<br>
+    If capacity is smaller than required units, build will refuse.
+  </p>
+
+  <div align="left">
+    <h3>〔 <code><b>Performance</b></code> 〕</h3>
+  </div>
+
+  <ul>
+    <li>Use smaller <code>maxStorageUnitsPerTick</code> if you get many interruptions:<code>CL.SM.build(regPos, blocks, 4)</code></li>
+    <li>Use larger values if you want faster conversion and your world runtime can handle it.</li>
+    <li>Storage tasks require the relevant chunks to be loaded. If a chunk is unloaded, the task pauses and resumes later.</li>
+  </ul>
+
+  <blockquote>
+    <p>
+      <h4><code><b>! IMPORTANT</b></code></h4>
+      <ul>
+        <li>Use smaller <code>maxStorageUnitsPerTick</code> if you get many interruptions:<code>CL.SM.build(regPos, blocks, 4)</code>.</li>
+        <li>Use larger values if you want faster conversion and your world runtime can handle it.</li>
+        <li>Storage tasks require the relevant chunks to be loaded. If a chunk is unloaded, the task will throw an error.</li>
+      </ul>
+    </p>
+  </blockquote>
+
+  <blockquote>
+    <p>
+      <h4><code><b>! SAFETY NOTE</b></code></h4>
+      <ul>
+        <li><code>build()</code> places solid blocks (default: <code>"Bedrock"</code>) for each storage unit.</li>
+        <li>Plan the region far away from gameplay, or in a sealed protected area.</li>
+      </ul>
+    </p>
+  </blockquote>
+
+</details>
+
+---
+
+<a id="storage-format"></a>
+<details open>
+  <summary>
+    <div align="center">
+      <h2>❮ <code><b>🗂️ Storage Format 🗂️</b></code> ❯</h2>
+    </div>
+  </summary>
+
+  <blockquote>
+    <p>
+      <h4><code><b>! INFO</b></code></h4>
+      <ul>
+        <li>This section documents how the built-in format works (useful for debugging or for custom tooling).</li>
+        <li>Storage consists of a <b>registry unit</b> and many <b>storage units</b>.</li>
+      </ul>
+    </p>
+  </blockquote>
+
+  <div align="left">
+    <h3>〔 <code><b>Registry Unit</b></code> 〕</h3>
+  </div>
+
+  <ul>
+    <li>Position: <code>BLOCKS[0]</code> when <code>is_chest_data = true</code></li>
+    <li>Slot 0 must contain <code>item.attributes.customAttributes.region = [lowX,lowY,lowZ,highX,highY,highZ]</code></li>
+    <li>Slots 1..35 store coordinate lists of storage units in <code>item.attributes.customAttributes._</code></li>
+    <li>Each coordinate list is a flat array: <code>[x0,y0,z0, x1,y1,z1, ...]</code></li>
+  </ul>
+
+  <blockquote>
+    <p>
+      Each registry slot can store up to <code>243</code> numbers (= <code>81</code> positions).<br>
+      If you have more storage units, the manager writes multiple slots.
+    </p>
+  </blockquote>
+
+  <div align="left">
+    <h3>〔 <code><b>Storage Unit</b></code> 〕</h3>
+  </div>
+
+  <ul>
+    <li>Physically: a block placed at some <code>(x,y,z)</code> inside the registry region.</li>
+    <li>Logically: a chest container at that position holding code chunks.</li>
+    <li>Contains <ins>4 partitions</ins> (so one storage unit stores up to 4 code blocks data)</li>
+  </ul>
+
+  <div align="left">
+    <h3>〔 <code><b>Partitions & Slots</b></code> 〕</h3>
+  </div>
+
+  <p>
+    Each partition uses <ins>9 slots</ins> (total 36 slots in a chest):
+  </p>
+
+  <ul>
+    <li>Partition <code>0</code>: slots <code>0..8</code></li>
+    <li>Partition <code>1</code>: slots <code>9..17</code></li>
+    <li>Partition <code>2</code>: slots <code>18..26</code></li>
+    <li>Partition <code>3</code>: slots <code>27..35</code></li>
+  </ul>
+
+  <p>
+    Each slot stores a <ins>raw string</ins> chunk in <code>item.attributes.customAttributes._</code>.<br>
+    To execute a partition, the loader concatenates up to 9 chunks and calls <code>(0, eval)(code)</code>.
+  </p>
+
+</details>
 
 ---
 
 <a id="features"></a>
+<details open>
+  <summary>
+    <div align="center">
+      <h2>❮ <code><b>✨ Features ✨</b></code> ❯</h2>
+    </div>
+  </summary>
 
-## ✨ Features
+  <div align="left">
+    <h3>〔 <code><b>Hide World Code</b></code> 〕</h3>
+  </div>
 
-<div align="center">
-<h3>❮ <code><b>Hide World Code</b></code> ❯</h3> 
-</div>
+  <div align="left">
+    <h4>✦ <em>Description</em> ✦</h4>
+  </div>
 
-<h3>✦ <em>description</em> ✦</br></h3>
-With this loader you can prevent anyone from stealing (coping) your world code (originally is accessible by pressing `F8` or directly from the code block editor pop-up window, which is also possible in a custom game). Though some (not all) hackers/exploiters can still access data of any block in the world where the chunk is loaded (i.e. your hidden code), and there is no good solution to be safe in a such case. Most you can do is to use <code>obfuscated code</code> in blocks data.
+  <p>
+    Moving your logic into block data (code blocks) prevents casual copying of your world code
+    (normally accessible via <kbd>F8</kbd> or directly from the code editor, including in custom games).
+    However, block data can still be easily read by attackers (exploiters) where the chunk is loaded.
+  </p>
 
-<h3>✦ <em>recommendation</em> ✦</br></h3>
-Place all the code blocks that you use for your world code far away enough and/or close them inside some multi-layer (optionally bedrock) box.
+  <p>
+    For maximum protection, move your code from blocks into chest storage using the
+    <code>Storage Manager</code>. Chest data is effectively impossible to steal in practice.
+  </p>
 
-<h3>✦ <em>block <code>lockedStatus</code></em> ✦</br></h3>
-If you are worried that hacker can somehow evaluate/execute your code in blocks data OR you just don't want anyone to accidentally or intentionally (re-)initialize your world code — then use <code>!CL.isBlockLocked(position)</code> guard. Its usage you may see clearly in <code>Advanced setup</code> of <code>Example</code> section.
+  <div align="left">
+    <h4>✦ <em>Recommendations</em> ✦</h4>
+  </div>
 
-<div align="center">
-<h3>❮ <code><b>Unlimited World Code</b></code> ❯</h3> 
-</div>
-
-<h3>✦ <em>description</em> ✦</br></h3>
-<code>16000</code> chars — real <code>World Code</code> capacity.</br>
-<code>11850</code> chars — default loader minified source code.</br>
-<code>14000</code> chars — if you include all possible callback names with fallback values into <code>ACTIVE_EVENTS</code> and also set <code>interruptionStatus</code> to <code>true</code> for all events inside <code>EVENT_REGISTRY</code></br></br>
-
-Considering the following assumptions:</br>
-• <code>[-100000,-100000,-100000,false,false],</code> — max block entry by chars (39),</br>
-• <code>[10,10,10,true,true],</code> — average min block entry by chars (22);</br>
--- we can get <code>16000 - 14000 = 1000</code> chars of free space which should be enough for <code>25–45+</code> blocks inside real <code>World Code</code>.</br>
-
-<h3>✦ <em>special method</em> ✦</br></h3>
-You can achieve truly UNLIMITED world code by changing <code>CL.configuration.BLOCKS</code> at runtime, </br>
-and then rebooting with the new settings.</br></br>
+  <ul>
+    <li>Place code blocks or storage far away from gameplay areas.</li>
+    <li>Seal them inside a protected multi-layer structure (optionally bedrock).</li>
+    <li>Optionally use the guard pattern to prevent manual execution by clicking blocks.</li>
+  </ul>
 
 ```js
-// code block [0, 2, 5]
+if (myId === null) {
+  // runs only during loader boot (not on manual click)
+}
+```
 
-if(!CL.isBlockLocked(thisPos)) {
+  <div align="left">
+    <h3>〔 <code><b>Unlimited World Code</b></code> 〕</h3>
+  </div>
 
-  CL.configuration.BLOCKS = [
+  <div align="left">
+    <h4>✦ <em>Description</em> ✦</h4>
+  </div>
+
+  <p>
+    Real <code>World Code</code> is limited to <code>16000</code> characters.
+    The loader bypasses this restriction by distributing your logic across any number of blocks or chest storage units.
+  </p>
+
+  <ul>
+    <li>Execution order follows <code>BLOCKS</code> (or storage order in chest mode).</li>
+    <li>The practical limit becomes Bloxd memory, not the editor.</li>
+    <li>In practice, <code>BLOCKS</code> array in configuration can have roughly <code>~8000</code> code block positions.</li>
+  </ul>
+
+  <div align="left">
+    <h4>✦ <em>Capacity</em> ✦</h4>
+  </div>
+
+  <p>
+    <code>16000</code> chars — real <code>World Code</code> capacity.<br>
+    <code>13610</code> chars — default loader minified source.<br>
+    <code>15890</code> chars — configuration fully populated
+    (<code>ACTIVE_EVENTS</code> maxed out, all entries in <code>EVENT_REGISTRY</code> fully defined).
+  </p>
+
+  <p>
+    With typical block coordinate sizes:
+  </p>
+
+  <ul>
+    <li><code>[-100000,-100000,-100000]</code> → ~27 chars</li>
+    <li><code>[10,10,10]</code> → ~12 chars</li>
+  </ul>
+
+  <p>
+    This leaves ~<code>110</code> free characters, enough for approximately
+    <code>4–9+</code> block positions directly inside real <code>World Code</code>.
+  </p>
+
+  <div align="left">
+    <h4>✦ <em>Extend Config Method</em> ✦</h4>
+  </div>
+
+  <p>
+    You can dynamically replace <code>CL.config.BLOCKS</code> at runtime and then call
+    <code>CL.reboot()</code>. This allows staged loading of large codebases while keeping
+    only a single block position in real <code>World Code</code>.
+  </p>
+
+```js
+if (myId === null) {
+  CL.config.BLOCKS = [
     [2, 2, 2],
     [4, 2, 2],
     [6, 2, 2],
     [8, 2, 2],
   ];
 
-  CL.configuration.boot_delay_ms = 0;
-  CL.configuration.boot_manager.show_load_time = true;
-  CL.configuration.boot_manager.show_errors = true;
-  
   tick = () => {
-    if(!CL.isRunning) {
+    if (!CL.isRunning) {
       CL.reboot();
     }
-  }
-
+  };
 }
 ```
 
-Here are the corresponding configurations to test for <code>Basic</code> and <code>Advanced</code> setup of <code>Example</code> section:</br>
-* [`Basic configuration special`](https://github.com/delfineonx/block-code-loader/blob/main/assets/basic_configuration_special_method.js)
-* [`Advanced configuration special`](https://github.com/delfineonx/block-code-loader/blob/main/assets/advanced_configuration_special_method.js)
+  <div align="left">
+    <h3>〔 <code><b>Dynamic Initialization</b></code> 〕</h3>
+  </div>
 
-<div align="center">
-<h3>❮ <code><b>Dynamic Initialization</b></code> ❯</h3> 
-</div>
+  <div align="left">
+    <h4>✦ <em>Description</em> ✦</h4>
+  </div>
 
-<h3>✦ <em>description</em> ✦</br></h3>
-This can be really useful when you don't need to reboot your whole world code and just want to partially change/update some behavior (usually while testing). When you have <ins>code</ins> that is:</br>
-• either under <code>!CL.isBlockLocked(position)</code> guard in the code blocks with <code>lockedStatus = false</code>,</br>
-• or not guarded with any type of this thing;</br>
--- it can be executed/(re-)initialized (i.e. simply by clicking the code block) <ins>anytime</ins> without using <code>CL.reboot()</code>. And if the <ins>code</ins> has your handler functions (callbacks) inside — they will be updated right away.
+  <p>
+    During development or testing, you may want to refresh only part of your logic
+    instead of rebooting everything. The loader supports both partial and complete re-initialization.
+  </p>
 
-<div align="center">
-<h3>❮ <code><b>Interruption Handling</b></code> ❯</h3> 
-</div>
+  <ul>
+    <li><code>Partial:</code> click a specific code block to re-execute only that block.</li>
+    <li><code>Complete:</code> call <code>CL.reboot()</code> to run a full boot session.</li>
+  </ul>
 
-<h3>✦ <em>description</em> ✦</br></h3>
+  <p>
+    If executed code defines callback handlers, they are replaced immediately, making hot-swapping logic possible.
+  </p>
 
-You must manually put (preferably at the very top) <code>Interruption Framework</code> runner inside your tick function:</br>
+  <div align="left">
+    <h3>〔 <code><b>Interruption Handling</b></code> 〕</h3>
+  </div>
+
+  <div align="left">
+    <h4>✦ <em>Description</em> ✦</h4>
+  </div>
+
+  <p>
+    Bloxd execution can be interrupted mid-flow.
+    The built-in <a href="https://github.com/delfineonx/interruption-framework"><code>Interruption Framework</code></a>
+    allows interrupted calls to be queued and retried safely and efficiently for selected selected events.
+  </p>
+
+  <ul>
+    <li>Enable via <code>event_manager.is_framework_enabled = true</code> (in real <code>World Code</code> only).</li>
+    <li>Mark events with <code>interruptionStatus = true</code> in <code>EVENT_REGISTRY</code>.</li>
+    <li>Retry budget is <code>retryLimit</code> (or <code>default_retry_limit</code>).</li>
+  </ul>
+
+  <div align="left">
+    <h4>✦ <em>Installation</em> ✦</h4>
+  </div>
+
+  <p>
+    The framework runner must be called every tick (preferably at the very top).
+  </p>
 
 ```js
 tick = () => {
-  IF.tick();
-  // other code ...
-}
+  IF.tick(); // required
+  // your logic
+};
 ```
 
-Obviously, you may use "inner" interruption safety (with idempotency) and state clearing without relying on Code Loader events interruption setup.</br>
-Though with help of built-in <code>Interruption Framework</code> the loader can make "outer" interruption safety (idempotency is up to user) and <ins>automatic</ins> state (interruption tracking) clearing — even after handler return itself, which can be considered much safer.</br>
-
-You can also use <code>IF.state = 0</code> to clear interruption tracking at any place (point) of your code even inside event with interruption setup enabled. It might be useful if you want to be extra careful of irreparable "player or world state" changes, and use separate interruption trackings for other code snippets inside your handler function. From the <code>Advanced example</code> bloxd schematic of <code>Example</code> section:</br>
+  <p>
+    The loader provides automatic interruption tracking and cleanup even after handlers return for selected events.
+    Outer-level framework setup is used internally for safety and convenience.
+    You may still use custom interruption handling with the help of framework inside your callback handler function.
+  </p>
 
 ```js
-// e.g. placed at the very top
-// i.e. it will check only whether the interruption is occurred on internal call by Code Loader (dynamic callback system specific)
 eventName = (...args) => {
-  IF.state = 0;
+  IF.state = 0; // clear interruption tracking
   // other code ...
-}
+};
 ```
 
-<h3>✦ <em>recommendation</em> ✦</br></h3>
+  <blockquote>
+    <p>
+      <h4><code><b>! TIP</b></code></h4>
+      Resetting with <code>IF.state = 0</code> inside can be useful when splitting handler logic into independent parts that should not share the same retry setup.
+    </p>
+  </blockquote>
 
-For the basic simple usage of the loader and no dealing with these specifics ensure the next configuration option in real <code>World Code</code>:</br>
+</details>
 
-```js
-// ...
-  event_manager: {
-    is_interruption_framework_enabled: false,
-    // ...
-  },
-// ...
-```
+---
+
+<a id="installation"></a>
+<details open>
+  <summary>
+    <div align="center">
+      <h2>❮ <code><b>🧪 Example 🧪</b></code> ❯</h2>
+    </div>
+  </summary>
+
+  <blockquote>
+    <p>
+      <h3><code><b>in progress...</b></code></h3>
+    </p>
+  </blockquote>
+
+</details>
 
 ---
 
 <a id="troubleshooting"></a>
+<details open>
+  <summary>
+    <div align="center">
+      <h2>❮ <code><b>🧯 Troubleshooting 🧯</b></code> ❯</h2>
+    </div>
+  </summary>
 
-## 🧯 Troubleshooting
+  <ul>
+    <li>
+      <code>"Unregistered active events: ..."</code><br>
+      The event exists in <code>ACTIVE_EVENTS</code> but is missing from <code>EVENT_REGISTRY</code>.
+      Fix the name or add an entry to the registry.
+    </li>
+    <li>
+      <code>"Invalid active events: ..."</code><br>
+      The loader couldn't wire the event (usually due to runtime changes to <code>ACTIVE_EVENTS</code>).
+      Keep the event in the initial real <code>World Code</code> list, or do correct runtime changes before reboot.
+    </li>
+    <li>
+      <code>"Reboot request was denied."</code><br>
+      You called <code>CL.reboot()</code> while a boot session is already running.
+      Wait until <code>CL.isRunning</code> becomes <code>false</code> (i.e. boot session is finished).
+    </li>
+    <li>
+      <code>"Error on primary setup - ..."</code><br>
+      A critical loader error happened right after world code init.
+      Reinstall the loader and make sure your configuration is correct.
+    </li>
+    <li>
+      <b>No code executes from blocks</b><br>
+      <ol>
+        <li>Ensure positions in <code>BLOCKS</code> are correct (use <code>CL.executionLogs()</code>).</li>
+        <li>Avoid named function declarations for events; assign handler functions to globals.</li>
+      </ol>
+    </li>
+    <li>
+      <b>Chest mode says "No storage data found"</b><br>
+      <ol>
+        <li>Check that <code>BLOCKS = [[registryX, registryY, registryZ]]</code>.</li>
+        <li>Ensure the registry unit slot 0 has <code>customAttributes.region</code> (run <code>CL.SM.check()</code>).</li>
+      </ol>
+    </li>
+    <li>
+      <b>Storage tasks never finish</b><br>
+      <ol>
+        <li>Make sure the region is loaded (teleport near it while building/disposing).</li>
+        <li>Lower per-tick budgets if you get many interruptions due to world execution runtime limit; raise them if you want faster progress.</li>
+      </ol>
+    </li>
+    <li>
+      <b>Interrupted events are never retried</b><br>
+      <ol>
+        <li><code>event_manager.is_framework_enabled</code> must be <code>true</code> in real World Code.</li>
+        <li>Set <code>EVENT_REGISTRY[eventName][1] = true</code> for that event.</li>
+        <li>Ensure the event is included in <code>ACTIVE_EVENTS</code>.</li>
+      </ol>
+    </li>
+  </ul>
 
-- <code>"Unregistered active events: ..."</code></br>
-: The event in `ACTIVE_EVENTS` has no entry in `EVENT_REGISTRY`. Either rename the event in `ACTIVE_EVENTS` or add an entry to `EVENT_REGISTRY`.
+</details>
 
-- <code>"Invalid active events: ..."</code></br>
-: 1) The event in `ACTIVE_EVENTS` has no entry in `EVENT_REGISTRY`.</br>
-: Either rename the event in `ACTIVE_EVENTS` or add an entry to `EVENT_REGISTRY`.</br>
-: 2) The event was not wired up with in-game callbacks on world code init (may happen if you change `ACTIVE_EVENTS` at runtime and then use reboot).</br>
-: Either add the event in `ACTIVE_EVENTS` in real <code>World Code</code> or fix incorrect modifications for `ACTIVE_EVENTS` at runtime before rebooting.
+---
 
-- <code>"Wait until current running boot session is finished."</code></br>
-: You called `CL.reboot()` while the another boot session is already in progress. Try again after it finishes.
+<div align="center">
+  <h2>❮ <code><b>📜 License & Credits</b></code> ❯</h2>
+</div>
 
-- <code>"Undefined error on events primary setup."</code> or <code>"Error on events primary setup - ..."</code></br>
-: Loader internal critical error (on world code init). Ensure the configuration is correct or reinstall the loader source code (paste its minified version again).</br>
-
-- <code>No code executes from my blocks.</code></br>
-: 1) Ensure block's `executionStatus` flag (or `default_execuion_status`) is `true`.</br>
-: 2) Use only anonymous or arrow function expressions assigned to your event handlers (callbacks), as global variables. Do not use function declarations with event (callback) names.
-
-- <code>Changed configuration (not in real `World Code`) but behavior didn't update.</code></br>
-: Modify `CL.configuration` object values, then always call `CL.reboot()` so the loader re‑reads/re-applies settings.
-
-- <code>Interrupted events are never retried.</code></br>
-: 1) Ensure the configuration is correct, the Interruption Framework setup for events is enabled (`event_manager.is_interruption_framework_enabled = true`).</br>
-: 2) Set the corresponding event `interruptionStatus` flag to `true`.
+<ul>
+  <li>Copyright (c) 2025-2026 delfineonx</li>
+  <li>Licensed under the Apache License, Version 2.0</li>
+  <li>Includes <code>Interruption Framework</code> by delfineonx</li>
+</ul>
 
 ---

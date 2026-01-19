@@ -1,32 +1,29 @@
-// Copyright (c) 2025 delfineonx
+// Copyright (c) 2025-2026 delfineonx
 // This product includes "Code Loader" created by delfineonx.
 // This product includes "Interruption Framework" created by delfineonx.
 // Licensed under the Apache License, Version 2.0.
 
-const Configuration = {
+const configuration = {
   // [[eventName, fallbackValue?], ...]
   // [[string, boolean|string|number|object|null|"undefined"], ...]
   ACTIVE_EVENTS: [
     // ...
   ],
 
-  // [[x, y, z, lockedStatus?, executionStatus?], ...]
-  // [[number, number, number, boolean|null, boolean|null], ...]
+  // [[x, y, z], ...]
+  // [[number, number, number], ...]
   BLOCKS: [
     // ...
   ],
 
   boot_manager: {
     boot_delay_ms: 100,
-    show_load_time: true,
-    show_executed_blocks: false,
-    show_errors: true,
+    show_boot_logs: true,
+    show_error_logs: true,
+    show_execution_logs: false,
   },
   block_manager: {
-    default_locked_status: true,
-    default_execution_status: true,
-    max_registrations_per_tick: 32,
-    max_chunk_requests_per_tick: 8,
+    is_chest_data: false,
     max_executions_per_tick: 16,
     max_errors_count: 32,
   },
@@ -35,20 +32,19 @@ const Configuration = {
     max_dequeue_per_tick: 16,
   },
   event_manager: {
-    is_interruption_framework_enabled: false,
-    default_retry_delay_ticks: 0,
-    default_retry_limit_ticks: 2,
+    is_framework_enabled: false,
+    default_retry_limit: 2,
   },
 
-  // eventName -> [fallbackValue?, interruptionStatus?, delayTicks?, limitTicks?]
-  // string -> [boolean|string|number|object|null|undefined, boolean|null, number|null, number|null]
+  // eventName -> [fallbackValue?, interruptionStatus?, retryLimit?]
+  // string -> [boolean|string|number|object|null|undefined, boolean|null, number|null]
   EVENT_REGISTRY: {
     "tick": null, // special event
     "onClose": [false],
     "onPlayerJoin": [false],
     "onPlayerLeave": [false],
     "onPlayerJump": [false],
-    "onRespawnRequest": [[0, -200000, 0]],
+    "onRespawnRequest": [[0, -100000, 0]],
     "playerCommand": [null],
     "onPlayerChat": [null],
     "onPlayerChangeBlock": ["preventChange"],
@@ -106,37 +102,43 @@ const Configuration = {
     "doPeriodicSave": [false],
   },
 
-  LOG_STYLE: {
-    error: { color: "#ff9d87", fontWeight: "600", fontSize: "1rem" },
-    warning: { color: "#fcd373", fontWeight: "600", fontSize: "1rem" },
-    success: { color: "#2eeb82", fontWeight: "600", fontSize: "1rem" },
-  },
+  STYLES: [
+    "#FF775E", "500", "0.95rem", // error
+    "#FFC23D", "500", "0.95rem", // warning
+    "#20DD69", "500", "0.95rem", // success
+    "#52B2FF", "500", "0.95rem", // info
+  ],
+};
+
+const _NOOP = function () { };
+const _PREFIX = "Code Loader";
+const _log = (message, type) => {
+  const styledText = _log.STYLES[type];
+  styledText[0].str = message;
+  api.broadcastMessage(styledText);
 };
 
 const InterruptionFramework = {
   state: 0,
-  handler: () => { },
+  fn: () => { },
   args: [],
-  delay: 0,
   limit: 2,
-
-  phase: 400000,
+  phase: 1048576,
   cache: null,
 
-  defaultPhase: 400000,
+  default: 1048576,
   wasInterrupted: false,
 
   tick: null,
 };
 const EventManager = {
-  primarySetupError: null, // [error.name, error.message]
   isPrimarySetupDone: false,
-
+  primarySetupError: null, // [error.name, error.message]
   delegator: {}, // eventName -> handler
   isEventActive: {}, // eventName -> true
   unregisteredActiveEvents: [], // [eventName, ...]
 
-  invalidActiveEvents: [], // [eventName, ...]
+  invalidActiveEvents: null, // [eventName, ...]
   established: false,
 
   primarySetup: null,
@@ -164,71 +166,78 @@ const JoinManager = {
   finalize: null,
 };
 const BlockManager = {
-  init: null,
+  executeBlockData: null,
+  executeStorageData: null,
 
-  phase: 4,
-  blocks: null, // [[x, y, z, executionStatus, blockName], ...]
-  errors: null, // [[x, y, z, error.name, error.message], ...]
+  phase: -1,
+  blocks: null, // [[x, y, z, blockName], ...]
+  errors: null, // [[error.name, error.message, x, y, z, partition], ...]
+  isChestData: false,
+  registryLoaded: false,
   established: false,
 
   establish: null,
   finalize: null,
-  isBlockLocked: null,
 };
 const BootManager = {
   phase: -2,
   isPrimaryBoot: true,
   isRunning: false,
 
-  logStyle: null,
-  logBootResult: null,
-  logLoadTime: null,
-  logExecutedBlocks: null,
-  logErrors: null,
+  bootLogs: null,
+  errorLogs: null,
+  executionLogs: null,
+  completeLogs: null,
+
+  tick: null,
+};
+const StorageManager = {
+  create: null,
+  check: null,
+  build: null,
+  dispose: null,
 
   tick: null,
 };
 const CodeLoader = {
-  configuration: null,
+  SM: null,
+  config: null,
   isPrimaryBoot: true,
   isRunning: false,
 
-  isBlockLocked: null,
-  logBootResult: null,
-  logLoadTime: null,
-  logExecutedBlocks: null,
-  logErrors: null,
+  reboot: null,
+  bootLogs: null,
+  errorLogs: null,
+  executionLogs: null,
+  completeLogs: null,
 };
-const NOOP = function () { };
 
 // Interruption Framework
 {
   const _IF = InterruptionFramework;
 
   const _interrupted = {};
-  let _enqueueId = 0;
+  const _emptyArgs = [];
+
+  let _external = 1;
+  let _element = [];
+  let _enqueueId = 1;
   let _dequeueId = 1;
   let _queueSize = 0;
-  let _element = [];
-  let _external = 1;
-  let _tickNum = 0;
 
   Object.defineProperty(globalThis.InternalError.prototype, "name", {
     configurable: true,
     get: () => {
       if (_external) {
         if (_IF.state) {
-          _interrupted[++_enqueueId] = [_IF.phase, _IF.cache, _IF.handler, _IF.args, _IF.delay + _tickNum, _IF.limit];
+          _interrupted[_enqueueId++] = [_IF.fn, _IF.args, _IF.limit, _IF.phase, _IF.cache];
           _queueSize++;
-          _IF.delay = 0;
-          _IF.limit = 2;
         }
       } else {
-        _element[0] = _IF.phase;
+        _element[3] = _IF.phase;
         _IF.wasInterrupted = false;
         _external = 1;
       }
-      _IF.cache = null;
       _IF.state = 0;
       return "InternalError";
     },
@@ -237,89 +246,81 @@ const NOOP = function () { };
   _IF.tick = () => {
     _IF.state = 0;
     if (!_queueSize) {
+      _IF.args = _emptyArgs;
       _IF.cache = null;
-      _tickNum++;
       return;
     }
 
     _external = 0;
     _IF.wasInterrupted = true;
 
-    let element;
-    const maxDequeueId = _enqueueId;
-    while (_dequeueId <= maxDequeueId) {
-      element = _element = _interrupted[_dequeueId];
-      if (element[4] <= _tickNum) {
-        if (element[5] > 0) {
-          element[5]--;
-          _IF.phase = element[0];
-          _IF.cache = element[1];
-          element[2](...element[3]);
-        }
-        delete _interrupted[_dequeueId++];
-        _queueSize--;
-      } else {
-        delete _interrupted[_dequeueId++];
-        _interrupted[++_enqueueId] = element;
+    while (_dequeueId < _enqueueId) {
+      _element = _interrupted[_dequeueId];
+      if (_element[2] > 0) {
+        _element[2]--;
+        _IF.phase = _element[3];
+        _IF.cache = _element[4];
+        _element[0](..._element[1]);
       }
+      delete _interrupted[_dequeueId++];
+      _queueSize--;
     }
 
     _IF.state = 0;
+    _IF.args = _emptyArgs;
     _IF.cache = null;
     _IF.wasInterrupted = false;
     _external = 1;
-    _tickNum++;
   };
 }
 
 // EventManager
 {
+  const _CF = configuration;
+  const _IF = InterruptionFramework;
   const _EM = EventManager;
 
-  const _NOOP = NOOP;
+  const api_setCallbackValueFallback = api.setCallbackValueFallback;
 
   let _primaryInstallCursor = 0;
   let _primaryActiveEvents = []; // [eventName, ...]
 
-  let _activeEvents = null;
-  let _eventRegistry = null;
-  let _resetCursor = 0;
-  let _setupCursor = 0;
+  let _activeEvents;
+  let _eventRegistry;
+  let _resetCursor;
+  let _setupCursor;
 
   _EM.primarySetup = () => {
     if (_EM.isPrimarySetupDone) {
       return;
     }
 
-    _eventRegistry = Configuration.EVENT_REGISTRY;
-    _activeEvents = Configuration.ACTIVE_EVENTS;
-    const thisConfig = Configuration.event_manager;
-    const isInterruptionFrameworkEnabled = !!thisConfig.is_interruption_framework_enabled;
-    let defaultRetryDelay = thisConfig.default_retry_delay_ticks | 0;
-    defaultRetryDelay = defaultRetryDelay & ~(defaultRetryDelay >> 31); // defaultRetryDelay > 0 ? defaultRetryDelay : 0
-    let defaultRetryLimit = thisConfig.default_retry_limit_ticks | 0;
+    _eventRegistry = _CF.EVENT_REGISTRY;
+    _activeEvents = _CF.ACTIVE_EVENTS;
+    const thisConfig = _CF.event_manager;
+    const isFrameworkEnabled = !!thisConfig.is_framework_enabled;
+    let defaultRetryLimit = thisConfig.default_retry_limit | 0;
     defaultRetryLimit = (defaultRetryLimit & ~(defaultRetryLimit >> 31)) + (-defaultRetryLimit >> 31) + 1; // defaultRetryLimit > 0 ? defaultRetryLimit : 1
 
     const delegator = _EM.delegator;
     const isEventActive = _EM.isEventActive;
     const unregisteredActiveEvents = _EM.unregisteredActiveEvents;
 
-    const activeEventsNum = _activeEvents.length;
-    let index = 0;
-    while (index < activeEventsNum) {
-      const listEntry = _activeEvents[index];
-      let eventName = listEntry;
-      if (listEntry instanceof Array) {
-        eventName = listEntry[0];
+    let primaryIndex = 0;
+    const activeEventsCount = _activeEvents.length;
+    while (primaryIndex < activeEventsCount) {
+      let eventName = _activeEvents[primaryIndex];
+      if (eventName instanceof Array) {
+        eventName = eventName[0];
+      }
+      if (eventName === "tick") {
+        primaryIndex++;
+        continue;
       }
       let registryEntry = _eventRegistry[eventName];
       if (registryEntry === undefined) {
         unregisteredActiveEvents[unregisteredActiveEvents.length] = eventName;
-        index++;
-        continue;
-      }
-      if (eventName === "tick") {
-        index++;
+        primaryIndex++;
         continue;
       }
       _primaryActiveEvents[_primaryActiveEvents.length] = eventName;
@@ -328,28 +329,19 @@ const NOOP = function () { };
         registryEntry = _eventRegistry[eventName] = [false];
       }
       const interruptionStatus = !!registryEntry[1];
-      if (isInterruptionFrameworkEnabled & interruptionStatus) {
-        let delay = registryEntry[2];
-        if (delay == null) {
-          delay = defaultRetryDelay;
+      if (isFrameworkEnabled && interruptionStatus) {
+        let retryLimit = registryEntry[2];
+        if (retryLimit == null) {
+          retryLimit = defaultRetryLimit;
         }
-        delay |= 0;
-
-        let limit = registryEntry[3];
-        if (limit == null) {
-          limit = defaultRetryLimit;
-        }
-        limit |= 0;
-
-        const _IF = InterruptionFramework;
+        retryLimit |= 0;
         delegator[eventName] = _NOOP;
         globalThis[eventName] = function handler(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
           _IF.state = 1;
-          _IF.handler = handler;
+          _IF.fn = handler;
           _IF.args = [arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8];
-          _IF.delay = delay;
-          _IF.limit = limit;
-          _IF.phase = 400000; // _IF.defaultPhase;
+          _IF.limit = retryLimit;
+          _IF.phase = 1048576; // _IF.default;
           try {
             return delegator[eventName](arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
           } finally {
@@ -362,15 +354,15 @@ const NOOP = function () { };
           return delegator[eventName](arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         };
       }
-      index++;
+      primaryIndex++;
     }
     isEventActive.tick = true;
   };
 
   _EM.primaryInstall = () => {
     const delegator = _EM.delegator;
-    const activeEventsNum = _primaryActiveEvents.length;
-    while (_primaryInstallCursor < activeEventsNum) {
+    const activeEventsCount = _primaryActiveEvents.length;
+    while (_primaryInstallCursor < activeEventsCount) {
       const eventName = _primaryActiveEvents[_primaryInstallCursor];
       Object.defineProperty(globalThis, eventName, {
         configurable: true,
@@ -381,6 +373,7 @@ const NOOP = function () { };
             delegator[eventName] = _NOOP;
           }
         },
+        get: () => delegator[eventName],
       });
       _primaryInstallCursor++;
     }
@@ -393,6 +386,7 @@ const NOOP = function () { };
           delegator.tick = _NOOP;
         }
       },
+      get: () => delegator.tick,
     });
   };
 
@@ -400,7 +394,7 @@ const NOOP = function () { };
     if (_EM.established) {
       return;
     }
-    _activeEvents = Configuration.ACTIVE_EVENTS;
+    _activeEvents = _CF.ACTIVE_EVENTS;
     _EM.invalidActiveEvents = [];
     _resetCursor = 0;
     _setupCursor = 0;
@@ -409,8 +403,8 @@ const NOOP = function () { };
 
   _EM.resetHandlers = () => {
     const delegator = _EM.delegator;
-    const activeEventsNum = _primaryActiveEvents.length;
-    while (_resetCursor < activeEventsNum) {
+    const activeEventsCount = _primaryActiveEvents.length;
+    while (_resetCursor < activeEventsCount) {
       delegator[_primaryActiveEvents[_resetCursor]] = _NOOP;
       _resetCursor++;
     }
@@ -418,12 +412,13 @@ const NOOP = function () { };
 
   _EM.setupFallbacks = () => {
     const isEventActive = _EM.isEventActive;
-    const activeEventsNum = _activeEvents.length;
-    while (_setupCursor < activeEventsNum) {
-      const listEntry = _activeEvents[_setupCursor];
-      let eventName = listEntry;
-      if (listEntry instanceof Array) {
-        eventName = listEntry[0];
+    const activeEventsCount = _activeEvents.length;
+    let eventEntry, eventName;
+    while (_setupCursor < activeEventsCount) {
+      eventEntry = _activeEvents[_setupCursor];
+      eventName = eventEntry;
+      if (eventEntry instanceof Array) {
+        eventName = eventEntry[0];
       }
       if (eventName === "tick") {
         _setupCursor++;
@@ -431,15 +426,15 @@ const NOOP = function () { };
       }
       if (isEventActive[eventName]) {
         let fallbackValue;
-        if (listEntry instanceof Array) {
-          fallbackValue = listEntry[1];
+        if (eventEntry instanceof Array) {
+          fallbackValue = eventEntry[1];
         }
         if (fallbackValue === undefined) {
           fallbackValue = _eventRegistry[eventName][0];
         } else if (fallbackValue === "undefined") {
           fallbackValue = undefined;
         }
-        api.setCallbackValueFallback(eventName, fallbackValue);
+        api_setCallbackValueFallback(eventName, fallbackValue);
       } else {
         _EM.invalidActiveEvents[_EM.invalidActiveEvents.length] = eventName;
       }
@@ -450,17 +445,14 @@ const NOOP = function () { };
 
 // TickMultiplexer
 {
-  const _TM = TickMultiplexer;
   const _IF = InterruptionFramework;
   const _EM = EventManager;
+  const _TM = TickMultiplexer;
 
-  const _NOOP = NOOP;
-
-  let _boot = null;
-  let _main = null;
-
-  let _installed = false;
-  let _finalized = false;
+  let _boot;
+  let _main;
+  let _installed;
+  let _finalized;
 
   _TM.establish = () => {
     if (_TM.established) {
@@ -475,17 +467,18 @@ const NOOP = function () { };
     _TM.established = true;
   };
 
-  const dispatch = () => {
+  const _dispatch = () => {
     _IF.tick();
     _boot();
     _TM.init();
-    _main();
+    _main(50);
   };
 
   _TM.install = () => {
     if (_installed) {
       return;
     }
+    const delegator = _EM.delegator;
     Object.defineProperty(globalThis, "tick", {
       configurable: true,
       set: (fn) => {
@@ -495,9 +488,10 @@ const NOOP = function () { };
           _main = _NOOP;
         }
       },
+      get: () => delegator.tick,
     });
     _boot = _EM.delegator.tick;
-    _EM.delegator.tick = dispatch;
+    _EM.delegator.tick = _dispatch;
     _installed = true;
   };
 
@@ -515,6 +509,7 @@ const NOOP = function () { };
           delegator.tick = _NOOP;
         }
       },
+      get: () => delegator.tick,
     });
     delegator.tick = _main;
     _boot = _NOOP;
@@ -525,32 +520,30 @@ const NOOP = function () { };
 
 // JoinManager
 {
-  const _JM = JoinManager;
+  const _CF = configuration;
   const _IF = InterruptionFramework;
   const _EM = EventManager;
+  const _JM = JoinManager;
   const _OM = BootManager;
+  const _JMprefix = _PREFIX + " JM: ";
 
-  const _NOOP = NOOP;
-
-  let _resetOnReboot = true;
-  let _maxDequeue = 1;
-
-  let _main = null;
-  let _buffer = null; // [[playerId, fromGameReset], ...]
-  let _joinState = null; // playerId -> 0/1/2
-  let _dequeueCursor = 0;
-
-  let _installed = false;
-  let _finalized = false;
+  let _resetOnReboot;
+  let _maxDequeuePerTick;
+  let _main;
+  let _buffer; // [playerId, ...]
+  let _joinState; // playerId -> 0/1/2
+  let _dequeueCursor;
+  let _installed;
+  let _finalized;
 
   _JM.establish = () => {
     if (_JM.established) {
       return;
     }
-    const thisConfig = Configuration.join_manager;
+    const thisConfig = _CF.join_manager;
     _resetOnReboot = !!thisConfig.reset_on_reboot;
-    _maxDequeue = thisConfig.max_dequeue_per_tick | 0;
-    _maxDequeue = (_maxDequeue & ~(_maxDequeue >> 31)) + (-_maxDequeue >> 31) + 1; // _maxDequeue > 0 ? _maxDequeue : 1
+    _maxDequeuePerTick = thisConfig.max_dequeue_per_tick | 0;
+    _maxDequeuePerTick = (_maxDequeuePerTick & ~(_maxDequeuePerTick >> 31)) + (-_maxDequeuePerTick >> 31) + 1; // maxDequeuePerTick > 0 ? maxDequeuePerTick : 1
 
     _main = _NOOP;
     _buffer = [];
@@ -564,8 +557,8 @@ const NOOP = function () { };
     _JM.established = true;
   };
 
-  const dispatch = (playerId, fromGameReset) => {
-    _buffer[_buffer.length] = [playerId, fromGameReset];
+  const _dispatch = (playerId) => {
+    _buffer[_buffer.length] = playerId;
     _joinState[playerId] = 1;
   };
 
@@ -573,7 +566,8 @@ const NOOP = function () { };
     if (_installed) {
       return;
     }
-    _EM.delegator.onPlayerJoin = dispatch;
+    const delegator = _EM.delegator;
+    delegator.onPlayerJoin = _dispatch;
     Object.defineProperty(globalThis, "onPlayerJoin", {
       configurable: true,
       set: (fn) => {
@@ -583,6 +577,7 @@ const NOOP = function () { };
           _main = _NOOP;
         }
       },
+      get: () => delegator.onPlayerJoin,
     });
     _installed = true;
   };
@@ -590,12 +585,11 @@ const NOOP = function () { };
   _JM.bufferPlayers = () => {
     if (_resetOnReboot | _OM.isPrimaryBoot) {
       const playerIds = api.getPlayerIds();
-      const playersNum = playerIds.length;
       let index = 0;
-      while (index < playersNum) {
-        const playerId = playerIds[index];
+      let playerId;
+      while (playerId = playerIds[index]) {
         if (!_joinState[playerId]) {
-          _buffer[_buffer.length] = [playerId, false];
+          _buffer[_buffer.length] = playerId;
           _joinState[playerId] = 1;
         }
         index++;
@@ -604,33 +598,29 @@ const NOOP = function () { };
   };
 
   _JM.dequeue = () => {
-    let budget = _maxDequeue;
-    while ((_dequeueCursor < _buffer.length) & (budget > 0)) {
-      const args = _buffer[_dequeueCursor];
-      const playerId = args[0];
+    let budget = _maxDequeuePerTick;
+    let playerId;
+    while ((_dequeueCursor < _buffer.length) && (budget > 0)) {
+      playerId = _buffer[_dequeueCursor];
       if (_joinState[playerId] !== 2) {
         _dequeueCursor++;
         _joinState[playerId] = 2;
 
         _IF.state = 1;
-        _IF.handler = _main;
-        _IF.args = args;
-        _IF.delay = 0;
-        _IF.limit = 1;
-        _IF.phase = 400000; // _IF.defaultPhase
+        _IF.fn = _main;
+        _IF.args = [playerId];
+        _IF.limit = 2;
+        _IF.phase = 1048576; // _IF.default
         try {
-          _main(playerId, args[1]);
+          _main(playerId);
         } catch (error) {
           _IF.state = 0;
-          api.broadcastMessage([{
-            str: "Code Loader: JoinManager: " + error.name + ": " + error.message,
-            style: _OM.logStyle.error ?? {},
-          }]);
+          _log(_JMprefix + error.name + ": " + error.message, 0);
         }
         _IF.state = 0;
 
-        budget--;
         _dequeueCursor--;
+        budget--;
       }
       _dequeueCursor++;
     }
@@ -650,7 +640,8 @@ const NOOP = function () { };
         } else {
           delegator.onPlayerJoin = _NOOP;
         }
-      }
+      },
+      get: () => delegator.onPlayerJoin,
     });
     delegator.onPlayerJoin = _main;
     _buffer = null;
@@ -660,152 +651,159 @@ const NOOP = function () { };
 
 // BlockManager
 {
+  const _CF = configuration;
   const _BM = BlockManager;
-  const _OM = BootManager;
 
-  let _defaultLockedStatus = true;
-  let _defaultExecutionStatus = true;
-  let _maxRegistrations = 1;
-  let _maxRequests = 1;
-  let _maxExecutions = 1;
-  let _maxErrors = 0;
+  const api_getBlock = api.getBlock;
+  const api_getBlockId = api.getBlockId;
+  const api_getBlockData = api.getBlockData;
+  const api_getStandardChestItems = api.getStandardChestItems;
 
-  let _blockLockedStatus = null; // blockId -> false/true
-  let _isChunkLoaded = null; // chunkId -> false/true
-  let _hasAnyBlocksToEval = 0; // false
-  let _registerCursor = 0;
-  let _errorCursor = 0;
-  let _executionCursor = 0;
-  let _finalized = false;
+  let _maxExecutionsPerTick;
+  let _maxErrorsCount;
+  let _errorIndex;
+  let _blockIndex;
+  let _registryItems;
+  let _registrySlotIndex;
+  let _coordsIndex;
+  let _partition;
+  let _finalized;
 
   _BM.establish = () => {
     if (_BM.established) {
       return;
     }
-    _BM.blocks = (Configuration.BLOCKS instanceof Array) ? Configuration.BLOCKS.slice() : [];
-    const thisConfig = Configuration.block_manager;
-    _defaultLockedStatus = !!thisConfig.default_locked_status;
-    _defaultExecutionStatus = !!thisConfig.default_execution_status;
-    _maxRegistrations = thisConfig.max_registrations_per_tick | 0;
-    _maxRegistrations = (_maxRegistrations & ~(_maxRegistrations >> 31)) + (-_maxRegistrations >> 31) + 1; // maxRegistrations > 0 ? maxRegistrations : 1
-    _maxRequests = thisConfig.max_chunk_requests_per_tick | 0;
-    _maxRequests = (_maxRequests & ~(_maxRequests >> 31)) + (-_maxRequests >> 31) + 1; // maxRequests > 0 ? maxRequests : 1
-    _maxExecutions = thisConfig.max_executions_per_tick | 0;
-    _maxExecutions = (_maxExecutions & ~(_maxExecutions >> 31)) + (-_maxExecutions >> 31) + 1; // maxEvals > 0 ? maxEvals : 1
-    _maxErrors = thisConfig.max_errors_count | 0;
-    _maxErrors = _maxErrors & ~(_maxErrors >> 31); // maxErrors > 0 ? maxErrors : 0
+    _BM.blocks = (_CF.BLOCKS instanceof Array) ? _CF.BLOCKS : [];
+    const thisConfig = _CF.block_manager;
+    _BM.isChestData = !!thisConfig.is_chest_data;
+    _maxExecutionsPerTick = thisConfig.max_executions_per_tick | 0;
+    _maxExecutionsPerTick = (_maxExecutionsPerTick & ~(_maxExecutionsPerTick >> 31)) + (-_maxExecutionsPerTick >> 31) + 1; // maxExecutionsPerTick > 0 ? maxExecutionsPerTick : 1
+    _maxErrorsCount = thisConfig.max_errors_count | 0;
+    _maxErrorsCount = _maxErrorsCount & ~(_maxErrorsCount >> 31); // maxErrorsCount > 0 ? maxErrorsCount : 0
 
-    _BM.phase = 0; // or 1
-    _blockLockedStatus = {};
-    _isChunkLoaded = {};
+    _BM.phase = 0;
     _BM.errors = [null];
-    _hasAnyBlocksToEval = 0;
-    _registerCursor = 0;
-    _executionCursor = 0;
-    _errorCursor = 0;
+    _errorIndex = 0;
+    _blockIndex = 0;
+    _BM.registryLoaded = false;
+    _registryItems = null;
+    _registrySlotIndex = 1;
+    _coordsIndex = 0;
+    _partition = 0;
     _finalized = false;
 
     _BM.established = true;
   };
 
-  const register = () => {
-    const blocks = _BM.blocks;
-    const blocksNum = blocks.length;
-    let requestBudget = _maxRequests;
-    let registerBudget = _maxRegistrations;
-    while ((_registerCursor < blocksNum) & (registerBudget > 0) & (requestBudget > 0)) {
-      const block = blocks[_registerCursor].slice();
-      let x = block[0];
-      x = (x | 0) - (x < (x | 0)); // Math.floor(x)
-      let y = block[1];
-      y = (y | 0) - (y < (y | 0)); // Math.floor(y)
-      let z = block[2];
-      z = (z | 0) - (z < (z | 0)); // Math.floor(z)
-
-      const blockPositionId = (x + "|" + y + "|" + z);
-      const lockedStatus = block[3];
-      if (lockedStatus == null) {
-        _blockLockedStatus[blockPositionId] = _defaultLockedStatus;
-      } else {
-        _blockLockedStatus[blockPositionId] = !!lockedStatus;
-      }
-
-      let evalStatus = block[4];
-      if (evalStatus == null) {
-        evalStatus = block[3] = _defaultExecutionStatus;
-      } else {
-        evalStatus = block[3] = !!evalStatus;
-      }
-
-      if (evalStatus) {
-        const chunkId = ((x >> 5) + "|" + (y >> 5) + "|" + (z >> 5));
-        if (_isChunkLoaded[chunkId] === undefined) {
-          const blockName = block[4] = api.getBlock(x, y, z);
-          if (blockName === "Unloaded") {
-            _isChunkLoaded[chunkId] = false;
-            requestBudget--;
-          } else {
-            _isChunkLoaded[chunkId] = true;
-          }
-        } else {
-          block[4] = "Unloaded";
-        }
-        _hasAnyBlocksToEval = 1;
-      } else {
-        block[4] = null;
-      }
-
-      blocks[_registerCursor] = block;
-
-      registerBudget--;
-      _registerCursor++;
-    }
-
-    _BM.phase = ((_registerCursor >= blocksNum) << 1) | (_hasAnyBlocksToEval ^ 1);  // (_registerCursor >= blocksNum) ? (_hasAnyBlocksToEval ? 2 : 3) : (_hasAnyBlocksToEval ? 0 : 1);
-  };
-
-  const execute = () => {
+  _BM.executeBlockData = () => {
     const blocks = _BM.blocks;
     const errors = _BM.errors;
-    const blocksNum = blocks.length;
-    let executionBudget = _maxExecutions;
-    while ((_executionCursor < blocksNum) & (executionBudget > 0)) {
-      const block = blocks[_executionCursor];
-      if (!block[3]) {
-        _executionCursor++;
+
+    let budget = _maxExecutionsPerTick;
+    const blocksCount = blocks.length;
+    let block, x, y, z, code;
+    while (_blockIndex < blocksCount) {
+      block = blocks[_blockIndex];
+      if (!block || block.length < 3) {
+        _blockIndex++;
         continue;
       }
 
-      const x = block[0];
-      const y = block[1];
-      const z = block[2];
+      x = block[0];
+      y = block[1];
+      z = block[2];
 
-      if (block[4] === "Unloaded") {
-        const blockName = api.getBlock(x, y, z);
-        if (blockName === "Unloaded") {
-          break;
-        }
-        block[4] = blockName;
+      if ((block[3] = api_getBlock(x, y, z)) === "Unloaded") {
+        return;
       }
+
+      code = api_getBlockData(x, y, z)?.persisted?.shared?.text;
 
       try {
-        const code = api.getBlockData(x, y, z)?.persisted?.shared?.text;
         (0, eval)(code);
       } catch (error) {
-        _errorCursor++;
-        errors[_errorCursor * +((errors.length - 1) < _maxErrors)] = [x, y, z, error.name, error.message];
+        _errorIndex++;
+        errors[_errorIndex * +((errors.length - 1) < _maxErrorsCount)] = [error.name, error.message, x, y, z];
       }
 
-      executionBudget--;
-      _executionCursor++;
+      _blockIndex++;
+
+      budget--;
+      if (budget <= 0) {
+        return;
+      }
     }
 
-    _BM.phase = 2 | (_executionCursor >= blocksNum);
+    _BM.phase = 1;
   };
 
-  _BM.init = () => {
-    if (_BM.phase < 2) { return register(); };
-    if (_BM.phase === 2) { execute(); };
+  _BM.executeStorageData = () => {
+    const errors = _BM.errors;
+
+    if (!_BM.registryLoaded) {
+      const registryPosition = _BM.blocks[0];
+      if (!registryPosition || registryPosition.length < 3) {
+        _BM.phase = 1;
+        return;
+      }
+      if (api_getBlockId(registryPosition[0], registryPosition[1], registryPosition[2]) === 1) {
+        return;
+      }
+      _registryItems = api_getStandardChestItems(registryPosition);
+      if (!_registryItems[0]?.attributes?.customAttributes?.region) {
+        _BM.phase = 1;
+        return;
+      }
+      _BM.registryLoaded = true;
+    }
+
+    let budget = _maxExecutionsPerTick;
+    let registryItem, coordsList, coordsLength, x, y, z, storageItems, code, storageSlotBaseIndex, chunkIndex, storageItem;
+    while (registryItem = _registryItems[_registrySlotIndex]) {
+      coordsList = registryItem.attributes.customAttributes._;
+      coordsLength = coordsList.length - 2;
+      while (_coordsIndex < coordsLength) {
+        x = coordsList[_coordsIndex];
+        y = coordsList[_coordsIndex + 1];
+        z = coordsList[_coordsIndex + 2];
+
+        if (api_getBlockId(x, y, z) === 1) {
+          return;
+        }
+
+        storageItems = api_getStandardChestItems([x, y, z]);
+
+        while (_partition < 4) {
+          code = "";
+          storageSlotBaseIndex = _partition * 9;
+          chunkIndex = 0;
+          while (chunkIndex < 9 && (storageItem = storageItems[storageSlotBaseIndex + chunkIndex])) {
+            code += storageItem.attributes.customAttributes._;
+            chunkIndex++;
+          }
+
+          try {
+            (0, eval)(code);
+          } catch (error) {
+            _errorIndex++;
+            errors[_errorIndex * +((errors.length - 1) < _maxErrorsCount)] = [error.name, error.message, x, y, z, _partition];
+          }
+
+          _partition++;
+
+          budget--;
+          if (budget <= 0) {
+            return;
+          }
+        }
+        _partition = 0;
+        _coordsIndex += 3;
+      }
+      _coordsIndex = 0;
+      _registrySlotIndex++;
+    }
+
+    _BM.phase = 1;
   };
 
   _BM.finalize = () => {
@@ -813,120 +811,107 @@ const NOOP = function () { };
       return;
     }
     _BM.errors[0] = null;
-    _isChunkLoaded = null;
+    _registryItems = null;
     _finalized = true;
-  };
-
-  _BM.isBlockLocked = (position) => {
-    const x = position[0];
-    const y = position[1];
-    const z = position[2];
-    const blockPositionId =
-      ((x | 0) - (x < (x | 0))) + "|" + // Math.floor(x)
-      ((y | 0) - (y < (y | 0))) + "|" + // Math.floor(y)
-      ((z | 0) - (z < (z | 0)));        // Math.floor(z)
-    if (_blockLockedStatus[blockPositionId] !== false) {
-      return !_OM.isRunning;
-    }
-    return false;
   };
 }
 
 // BootManager
 {
-  const _OM = BootManager;
+  const _CF = configuration;
   const _EM = EventManager;
   const _TM = TickMultiplexer;
   const _JM = JoinManager;
   const _BM = BlockManager;
+  const _OM = BootManager;
   const _CL = CodeLoader;
-
-  let _bootDelayTicks = 0;
-  let _showLoadTime = true;
-  let _showErrors = true;
-  let _showExecutedBlocks = false;
+  const _EMprefix = _PREFIX + " EM: ";
+  const _BMprefix = _PREFIX + " BM: ";
+  const _OMprefix = _PREFIX + " OM: ";
 
   let _tickNum = -1;
-  let _loadTimeTicks = -1;
 
-  _OM.logLoadTime = (showErrors) => {
-    const errorsNum = _BM.errors.length - 1;
-    let logs = "Code Loader: BootManager: Code was loaded in " + (_loadTimeTicks * 50) + " ms";
-    if (errorsNum === 0) {
-      logs += showErrors ? (" with 0 errors.") : (".");
-      api.broadcastMessage([{
-        str: logs,
-        style: _OM.logStyle.success ?? {},
-      }]);
+  let _bootDelayTicks;
+  let _showBootLogs;
+  let _showErrorLogs;
+  let _showExecutionLogs;
+  let _loadTimeTicks;
+
+  _OM.bootLogs = (showErrors) => {
+    let message = "Code was loaded in " + (_loadTimeTicks * 50) + " ms";
+    const errorsCount = _BM.errors.length - 1;
+    if (showErrors) {
+      message += (errorsCount > 0) ? (" with " + errorsCount + " error" + ((errorsCount === 1) ? "" : "s") + ".") : (" with 0 errors.");
     } else {
-      logs += showErrors ? (" with " + errorsNum + " error" + ((errorsNum === 1) ? "" : "s") + ".") : (".");
-      api.broadcastMessage([{
-        str: logs,
-        style: _OM.logStyle.warning ?? {},
-      }]);
+      message += ".";
     }
+    _log(_OMprefix + message, 1 + (errorsCount <= 0));
   };
 
-  _OM.logExecutedBlocks = () => {
-    const blocks = _BM.blocks;
-    const blocksNum = blocks.length;
-    let logs = "";
-    let count = 0;
-    let index = 0;
-    while (index < blocksNum) {
-      const block = blocks[index];
-      if (block[3]) {
-        logs += "\n\"" + block[4] + "\" at (" + block[0] + ", " + block[1] + ", " + block[2] + ")";
-        count++;
-      }
-      index++;
-    }
-    logs = "Code Loader: BlockManager: Executed " + count + " block" + ((count === 1) ? "" : "s") + ":" + logs;
-    api.broadcastMessage([{
-      str: logs,
-      style: ((_BM.errors.length - 1) ? _OM.logStyle.warning : _OM.logStyle.success) ?? {},
-    }]);
-  };
-
-  _OM.logErrors = () => {
+  _OM.errorLogs = (showSuccess) => {
     const errors = _BM.errors;
-    const errorsNum = errors.length - 1;
-    if (errorsNum > 0) {
-      let logs = "Code Loader: BlockManager: Code execution error" + ((errorsNum === 1) ? "" : "s") + ":";
-      let index = 1;
-      while (index <= errorsNum) {
-        const error = errors[index];
-        logs += "\n" + error[3] + " at (" + error[0] + ", " + error[1] + ", " + error[2] + "): " + error[4];
-        index++;
+    const errorsCount = errors.length - 1;
+    if (errorsCount > 0) {
+      let message = "Code execution error" + ((errorsCount === 1) ? "" : "s") + ":";
+      let error;
+      if (_BM.isChestData) {
+        for (let index = 1; index <= errorsCount; index++) {
+          error = errors[index];
+          message += "\n" + error[0] + " at (" + error[2] + ", " + error[3] + ", " + error[4] + ") in partition (" + error[5] + "): " + error[1];
+        }
+      } else {
+        for (let index = 1; index <= errorsCount; index++) {
+          error = errors[index];
+          message += "\n" + error[0] + " at (" + error[2] + ", " + error[3] + ", " + error[4] + "): " + error[1];
+        }
       }
-      api.broadcastMessage([{
-        str: logs,
-        style: _OM.logStyle.error ?? {},
-      }]);
+      _log(_BMprefix + message, 0);
+    } else if (showSuccess) {
+      _log(_BMprefix + "No code execution errors.", 2);
     }
   };
 
-  _OM.logBootResult = (showLoadTime, showErrors, showExecutedBlocks) => {
+  _OM.executionLogs = () => {
+    const blocks = _BM.blocks;
+    let message = "";
+    let block;
+    if (_BM.isChestData) {
+      if (_BM.registryLoaded) {
+        block = blocks[0];
+        message = "Executed storage data at (" + block[0] + ", " + block[1] + ", " + block[2] + ").";
+      } else {
+        message = "No storage data found.";
+      }
+    } else {
+      let amount = 0;
+      const blocksCount = blocks.length;
+      for (let index = 0; index < blocksCount; index++) {
+        block = blocks[index];
+        if (block[3]) {
+          message += "\n\"" + block[3] + "\" at (" + block[0] + ", " + block[1] + ", " + block[2] + ")";
+          amount++;
+        }
+      }
+      message = "Executed " + amount + " block" + ((amount === 1) ? "" : "s") + " data" + ((amount === 0) ? "." : ":") + message;
+    }
+    _log(_BMprefix + message, 3);
+  };
+
+  _OM.completeLogs = (showBoot, showErrors, showExecution) => {
     if (_EM.unregisteredActiveEvents.length) {
-      api.broadcastMessage([{
-        str: "Code Loader: EventManager: Unregistered active events: \"" + _EM.unregisteredActiveEvents.join("\", \"") + "\".",
-        style: _OM.logStyle.warning ?? {},
-      }]);
+      _log(_EMprefix + "Unregistered active events: \"" + _EM.unregisteredActiveEvents.join("\", \"") + "\".", 1);
     }
     if (_EM.invalidActiveEvents.length) {
-      api.broadcastMessage([{
-        str: "Code Loader: EventManager: Invalid active events: \"" + _EM.invalidActiveEvents.join("\", \"") + "\".",
-        style: _OM.logStyle.warning ?? {},
-      }]);
+      _log(_EMprefix + "Invalid active events: \"" + _EM.invalidActiveEvents.join("\", \"") + "\".", 1);
     }
-    if (showLoadTime) {
-      _OM.logLoadTime(showErrors);
-    }
-    if (showExecutedBlocks) {
-      _OM.logExecutedBlocks();
+    if (showBoot) {
+      _OM.bootLogs(showErrors);
     }
     if (showErrors) {
-      _OM.logErrors();
+      _OM.errorLogs(!showBoot);
+    }
+    if (showExecution) {
+      _OM.executionLogs();
     }
   };
 
@@ -936,14 +921,17 @@ const NOOP = function () { };
     if (_OM.phase < 6) {
       // ensure primary setup
       if (_OM.phase === -2) {
-        if (_OM.isPrimaryBoot & (!_EM.isPrimarySetupDone) & (_tickNum > 20)) {
+        if (_OM.isPrimaryBoot && (!_EM.isPrimarySetupDone) && (_tickNum > 20)) {
           const criticalError = _EM.primarySetupError;
-          const logs = `Code Loader: EventManager: ${(criticalError === null) ? "Undefined e" : "E"}rror on events primary setup${(criticalError === null) ? "." : ` - ${criticalError[0]}: ${criticalError[1]}.`}`;
+          const message = _EMprefix + "Error on primary setup - " + criticalError?.[0] + ": " + criticalError?.[1] + ".";
           const playerIds = api.getPlayerIds();
-          for (const playerId of playerIds) {
+          let index = 0;
+          let playerId;
+          while (playerId = playerIds[index]) {
             if (api.checkValid(playerId)) {
-              api.kickPlayer(playerId, logs);
+              api.kickPlayer(playerId, message);
             }
+            index++;
           }
         }
         return;
@@ -952,20 +940,16 @@ const NOOP = function () { };
       // start boot
       if (_OM.phase === 0) {
         _tickNum = 0;
-
-        const thisConfig = Configuration.boot_manager;
+        
+        const thisConfig = _CF.boot_manager;
         _bootDelayTicks = ((thisConfig.boot_delay_ms | 0) * 0.02) | 0;
         _bootDelayTicks = _bootDelayTicks & ~(_bootDelayTicks >> 31); // bootDelayTicks > 0 ? bootDelayTicks : 0
-        _showLoadTime = !!thisConfig.show_load_time;
-        _showErrors = !!thisConfig.show_errors;
-        _showExecutedBlocks = !!thisConfig.show_executed_blocks;
-        _OM.logStyle = {
-          error: Object.assign({}, Configuration.LOG_STYLE.error),
-          warning: Object.assign({}, Configuration.LOG_STYLE.warning),
-          success: Object.assign({}, Configuration.LOG_STYLE.success),
-        };
-
+        _showBootLogs = !!thisConfig.show_boot_logs;
+        _showErrorLogs = !!thisConfig.show_error_logs;
+        _showExecutionLogs = !!thisConfig.show_execution_logs;
+        
         _loadTimeTicks = -1;
+
         _EM.established = false;
         _TM.established = false;
         _JM.established = false;
@@ -1008,26 +992,31 @@ const NOOP = function () { };
       // install managers
       if (_OM.phase === 4) {
         if (_EM.isEventActive.onPlayerJoin) {
-          _JM.bufferPlayers();
           _JM.install();
+          _JM.bufferPlayers();
         }
         _TM.install();
         _OM.phase = 5;
       }
 
-      // start block initializer
+      // start data initializer
       if (_OM.phase === 5) {
-        _TM.init = _BM.init;
+        if (_BM.isChestData) {
+          _TM.init = _BM.executeStorageData;
+        } else {
+          _TM.init = _BM.executeBlockData;
+        }
         _OM.phase = 6;
         return;
       }
     }
 
-    // finish block initializer
+    // finish data initializer
     if (_OM.phase === 6) {
-      if (_BM.phase === 3) {
+      if (_BM.phase === 1) {
         _BM.finalize();
-        _OM.phase = 6 + 1 + !_EM.isEventActive.onPlayerJoin;
+        _BM.phase = -1;
+        _OM.phase = 7 + !_EM.isEventActive.onPlayerJoin;
       }
     }
 
@@ -1042,97 +1031,369 @@ const NOOP = function () { };
     // finish boot
     if (_OM.phase === 8) {
       _TM.finalize();
-      _BM.phase = 4;
       _CL.isPrimaryBoot = _OM.isPrimaryBoot = false;
       _CL.isRunning = _OM.isRunning = false;
       _OM.phase = -1;
 
       _loadTimeTicks = _tickNum - _bootDelayTicks + 1;
-      _OM.logBootResult(_showLoadTime, _showErrors, _showExecutedBlocks);
+      _OM.completeLogs(_showBootLogs, _showErrorLogs, _showExecutionLogs);
+    }
+  };
+}
+
+// StorageManager
+{
+  const _SM = StorageManager;
+  const _SMprefix = _PREFIX + " SM: ";
+
+  const api_setBlock = api.setBlock;
+  const api_getBlockData = api.getBlockData;
+  const api_getStandardChestItems = api.getStandardChestItems;
+  const api_setStandardChestItemSlot = api.setStandardChestItemSlot;
+
+  const _taskQueue = [];
+  let _taskIndex = 0;
+  let _taskPhase = 1;
+
+  const _blockType = "Bedrock";
+  const _itemType = "Boat";
+  const _storageItemData = { customAttributes: { _: null } };
+  const _registryItemData = { customAttributes: { _: [] } };
+  const _storageCoordsBuffer = _registryItemData.customAttributes._;
+  const _dataChunksBuffer = [];
+
+  let _storageX;
+  let _storageY;
+  let _storageZ;
+  let _blockIndex;
+  let _partition;
+  let _storagePosition;
+  let _registrySlotIndex;
+  let _coordsList;
+  let _coordsIndex;
+  let _coordsLength;
+
+  const _build = (blocks, registryPosition, lowX, lowY, lowZ, highX, highY, highZ, maxStorageUnitsPerTick) => {
+    let x = _storageX;
+    let y = _storageY;
+    let z = _storageZ;
+    
+    if (_taskPhase === 1) {
+      _storageX = x = lowX;
+      _storageY = y = lowY;
+      _storageZ = z = lowZ;
+      _blockIndex = 0;
+      _registrySlotIndex = 1;
+      _coordsLength = 0;
+      _taskPhase = 2;
+    }
+    
+    let budget = maxStorageUnitsPerTick;
+    const blocksCount = blocks.length;
+    let rawData, rawStart, rawEnd, escapedData, escapedCursor, escapedDataEnd, escapedChunkEnd, backslashPosition, runLength;
+    let block, storageSlotBaseIndex, chunkIndex, chunksLength;
+    while (_blockIndex < blocksCount) {
+      if (_taskPhase === 2) {
+        x++;
+        if (x > highX) {
+          x = lowX;
+          z++;
+          if (z > highZ) {
+            z = lowZ;
+            y++;
+          }
+        }
+        api_setBlock(x, y, z, _blockType);
+        _storageX = x;
+        _storageY = y;
+        _storageZ = z;
+        _partition = 0;
+        _storagePosition = [x, y, z];
+        _taskPhase = 3;
+      }
+
+      while (_partition < 4 && _blockIndex < blocksCount) {
+        if (_taskPhase === 3) {
+          block = blocks[_blockIndex];
+          rawData = api_getBlockData(block[0], block[1], block[2])?.persisted?.shared?.text;
+          if (rawData?.length > 0) {
+            chunkIndex = 0;
+            rawStart = 0;
+            rawEnd = 0;
+            escapedData = JSON.stringify(rawData);
+            escapedCursor = 1;
+            escapedDataEnd = escapedData.length - 1;
+            while (escapedCursor < escapedDataEnd) {
+              escapedChunkEnd = escapedCursor + 1950;
+              if (escapedChunkEnd > escapedDataEnd) { escapedChunkEnd = escapedDataEnd; }
+              escapedChunkEnd -= (escapedData[escapedChunkEnd - 1] === "\\");
+              while (escapedCursor < escapedChunkEnd) {
+                backslashPosition = escapedData.indexOf("\\", escapedCursor);
+                if (backslashPosition === -1 || backslashPosition >= escapedChunkEnd) {
+                  runLength = escapedChunkEnd - escapedCursor;
+                  escapedCursor += runLength;
+                  rawEnd += runLength;
+                  break;
+                }
+                if (backslashPosition > escapedCursor) {
+                  runLength = backslashPosition - escapedCursor;
+                  escapedCursor += runLength;
+                  rawEnd += runLength;
+                }
+                escapedCursor += 2;
+                rawEnd += 1;
+              }
+              _dataChunksBuffer[chunkIndex++] = rawData.slice(rawStart, rawEnd);
+              rawStart = rawEnd;
+            }
+            _dataChunksBuffer.length = chunkIndex;
+            _taskPhase = 4;
+          }
+        }
+        if (_taskPhase === 4) {
+          storageSlotBaseIndex = _partition * 9;
+          chunkIndex = 0;
+          chunksLength = _dataChunksBuffer.length;
+          while (chunkIndex < chunksLength) {
+            _storageItemData.customAttributes._ = _dataChunksBuffer[chunkIndex];
+            api_setStandardChestItemSlot(_storagePosition, storageSlotBaseIndex + chunkIndex, _itemType, null, undefined, _storageItemData);
+            chunkIndex++;
+          }
+          _partition++;
+          _taskPhase = 3;
+        }
+        _blockIndex++;
+      }
+
+      if (_coordsLength >= 243) {
+        api_setStandardChestItemSlot(registryPosition, _registrySlotIndex, _itemType, null, undefined, _registryItemData);
+        _registrySlotIndex++;
+        _storageCoordsBuffer.length = 0;
+        _coordsLength = 0;
+      }
+
+      _storageCoordsBuffer[_coordsLength++] = x;
+      _storageCoordsBuffer[_coordsLength++] = y;
+      _storageCoordsBuffer[_coordsLength++] = z;
+
+      _taskPhase = 2;
+
+      budget--;
+      if (budget <= 0) {
+        return false;
+      }
+    }
+
+    api_setStandardChestItemSlot(registryPosition, _registrySlotIndex, _itemType, null, undefined, _registryItemData);
+
+    _storageItemData.customAttributes._ = null;
+    _storageCoordsBuffer.length = 0;
+    _dataChunksBuffer.length = 0;
+    _storagePosition = null;
+
+    _log(_SMprefix + "Built storage at (" + registryPosition[0] + ", " + registryPosition[1] + ", " + registryPosition[2] + ").", 2);
+
+    _taskPhase = 1;
+    return true;
+  };
+
+  const _dispose = (registryPosition, registryItems, maxStorageUnitsPerTick) => {
+    if (_taskPhase === 1) {
+      _registrySlotIndex = 1;
+      _coordsIndex = 0;
+      _taskPhase = 2;
+    }
+    
+    let budget = maxStorageUnitsPerTick;
+    let registryItem;
+    while (registryItem = registryItems[_registrySlotIndex]) {
+      if (_taskPhase === 2) {
+        _coordsList = registryItem.attributes.customAttributes._;
+        _coordsIndex = 0;
+        _coordsLength = _coordsList.length;
+        _taskPhase = 3;
+      }
+
+      if (_taskPhase === 3) {
+        while (_coordsIndex < _coordsLength) {
+          api_setBlock(_coordsList[_coordsIndex], _coordsList[_coordsIndex + 1], _coordsList[_coordsIndex + 2], "Air");
+          _coordsIndex += 3;
+          budget--;
+          if (budget <= 0) {
+            return false;
+          }
+        }
+        api_setStandardChestItemSlot(registryPosition, _registrySlotIndex, "Air");
+        _registrySlotIndex++;
+        _taskPhase = 2;
+      }
+    }
+
+    _log(_SMprefix + "Disposed storage at (" + registryPosition[0] + ", " + registryPosition[1] + ", " + registryPosition[2] + ").", 2);
+
+    _taskPhase = 1;
+    return true;
+  };
+
+  _SM.create = (lowPosition, highPosition) => {
+    const lowX = lowPosition[0];
+    const lowY = lowPosition[1];
+    const lowZ = lowPosition[2];
+    const highX = highPosition[0];
+    const highY = highPosition[1];
+    const highZ = highPosition[2];
+    if (lowX > highX || lowY > highY || lowZ > highZ) {
+      _log(_SMprefix + "Invalid region bounds. lowPos must be <= highPos on all axes.", 1);
+      return;
+    }
+    api_setBlock(lowX, lowY, lowZ, _blockType);
+    api_setStandardChestItemSlot(lowPosition, 0, _itemType, null, undefined, {
+      customAttributes: {
+        region: [lowX, lowY, lowZ, highX, highY, highZ]
+      }
+    });
+    _log(_SMprefix + "Registry unit created at (" + lowX + ", " + lowY + ", " + lowZ + ").", 2);
+  };
+
+  _SM.check = (registryPosition) => {
+    const registryItems = api_getStandardChestItems(registryPosition);
+    const region = registryItems[0]?.attributes?.customAttributes?.region;
+    if (!region) {
+      _log(_SMprefix + "No valid registry unit found.", 1);
+    } else {
+      _log(_SMprefix + "Storage covers region from (" + region[0] + ", " + region[1] + ", " + region[2] + ") to (" + region[3] + ", " + region[4] + ", " + region[5] + ").", 3);
+    }
+  };
+
+  _SM.build = (registryPosition, blocks, maxStorageUnitsPerTick = 16) => {
+    const registryItems = api_getStandardChestItems(registryPosition);
+    const region = registryItems[0]?.attributes?.customAttributes?.region;
+    if (!region) {
+      _log(_SMprefix + "No valid registry unit found.", 1);
+      return;
+    }
+
+    const lowX = region[0];
+    const lowY = region[1];
+    const lowZ = region[2];
+    const highX = region[3];
+    const highY = region[4];
+    const highZ = region[5];
+
+    const capacity = (highX - lowX + 1) * (highY - lowY + 1) * (highZ - lowZ + 1);
+    const required = (blocks.length + 7) >> 2;
+    if (capacity < required) {
+      _log(_SMprefix + "Not enough space. Need " + required + " storage units, but region holds " + capacity + ".", 0);
+    } else {
+      _taskQueue[_taskQueue.length] = () => _build(blocks, registryPosition, lowX, lowY, lowZ, highX, highY, highZ, maxStorageUnitsPerTick);
+    }
+  };
+
+  _SM.dispose = (registryPosition, maxStorageUnitsPerTick = 32) => {
+    const registryItems = api_getStandardChestItems(registryPosition);
+    if (!registryItems[0]?.attributes?.customAttributes?.region) {
+      _log(_SMprefix + "No valid registry unit found.", 1);
+    } else {
+      _taskQueue[_taskQueue.length] = () => _dispose(registryPosition, registryItems, maxStorageUnitsPerTick);
+    }
+  };
+
+  _SM.tick = () => {
+    const tasksCount = _taskQueue.length;
+    if (tasksCount) {
+      let isActive = _taskIndex < tasksCount;
+      while (isActive) {
+        try {
+          if (!_taskQueue[_taskIndex]()) {
+            break;
+          }
+        } catch (error) {
+          _log(_SMprefix + "Task error on tick - " + error.name + ": " + error.message, 0);
+        }
+        isActive = ++_taskIndex < tasksCount;
+      }
+      if (!isActive) {
+        _taskIndex = 0;
+        _taskQueue.length = 0;
+      }
     }
   };
 }
 
 // CodeLoader
 {
-  const _CL = CodeLoader;
   const _EM = EventManager;
-  const _BM = BlockManager;
   const _OM = BootManager;
+  const _CL = CodeLoader;
+  const _OMprefix = _PREFIX + " OM: ";
 
-  _CL.configuration = Configuration;
-
-  _CL.isBlockLocked = (position) => {
-    return ((position instanceof Array) && (position.length === 3) && _BM.isBlockLocked(position));
-  };
+  _CL.SM = StorageManager;
+  
+  _CL.config = configuration;
 
   _CL.reboot = () => {
     if (!_OM.isRunning) {
       _EM.delegator.tick = _OM.tick;
       _OM.phase = 0;
     } else {
-      api.broadcastMessage([{
-        str: "Code Loader: BootManager: Wait until current running boot session is finished.",
-        style: _OM.logStyle.warning ?? {},
-      }]);
+      _log(_OMprefix + "Reboot request was denied.", 1);
     }
   };
 
-  _CL.logBootResult = (showLoadTime = true, showErrors = true, showExecutedBlocks = false) => {
-    _OM.logBootResult(showLoadTime, showErrors, showExecutedBlocks);
+  _CL.bootLogs = (showErrors = true) => {
+    _OM.bootLogs(showErrors);
   };
 
-  _CL.logLoadTime = (showErrors = true) => {
-    _OM.logLoadTime(showErrors);
+  _CL.errorLogs = (showSuccess = true) => {
+    _OM.errorLogs(showSuccess);
   };
 
-  _CL.logErrors = () => {
-    _OM.logErrors();
+  _CL.executionLogs = () => {
+    _OM.executionLogs();
   };
 
-  _CL.logExecutedBlocks = () => {
-    _OM.logExecutedBlocks();
+  _CL.completeLogs = (showBoot = true, showErrors = true, showExecution = false) => {
+    _OM.completeLogs(showBoot, showErrors, showExecution);
   };
 };
 
-// Tick Event Setup
-{
-  const delegator = EventManager.delegator;
-  delegator.tick = BootManager.tick;
-  globalThis.tick = function () {
-    delegator.tick();
-  };
-}
-
 // Primary Setup
 try {
+  const _SM = StorageManager;
+  const _delegator = EventManager.delegator;
+  _delegator.tick = BootManager.tick;
+  globalThis.tick = function () {
+    _delegator.tick(50);
+    _SM.tick();
+  };
+
   EventManager.primarySetup();
 
-  const toSeal = [
-    Configuration,
-    Configuration.boot_manager,
-    Configuration.block_manager,
-    Configuration.join_manager,
-    Configuration.event_manager,
-    Configuration.LOG_STYLE,
-
-    InterruptionFramework,
-    EventManager,
-    TickMultiplexer,
-    JoinManager,
-    BlockManager,
-    BootManager,
-    CodeLoader,
-  ];
-
-  const toSealNum = toSeal.length;
-  let index = 0;
-  while (index < toSealNum) {
-    Object.seal(toSeal[index]);
-    index++;
+  const configStyles = configuration.STYLES;
+  const logStyles = _log.STYLES = [];
+  for (let type = 0; type < 4; type++) {
+    logStyles[type] = [{
+      str: "",
+      style: {
+        color: configStyles[type * 3],
+        fontWeight: configStyles[type * 3 + 1],
+        fontSize: configStyles[type * 3 + 2],
+      }
+    }];
   }
 
-  Object.freeze(Configuration.EVENT_REGISTRY);
+  const seal = Object.seal;
+  const freeze = Object.freeze;
+  seal(configuration);
+  seal(configuration.boot_manager);
+  seal(configuration.block_manager);
+  seal(configuration.join_manager);
+  seal(configuration.event_manager);
+  freeze(configuration.EVENT_REGISTRY);
+  freeze(configuration.STYLES);
+  seal(InterruptionFramework);
+  freeze(StorageManager);
+  seal(CodeLoader);
 
   EventManager.isPrimarySetupDone = true;
   BootManager.phase = 0;
