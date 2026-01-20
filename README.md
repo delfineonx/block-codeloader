@@ -129,8 +129,37 @@ const configuration = {
 tick = () => { }; // (2, 2, 2)
 onPlayerJump = (playerId) => { }; // (4, 2, 2)
 onPlayerChat = function (playerId, chatMessage, channelName) { }; // (6, 2, 2)
-onPlayerJoin = function (playerId, fromGameReset) { }; // (8, 2, 2)
+onPlayerJoin = function (playerId) { }; // (8, 2, 2)
 // ...
+```
+
+  <div align="left">
+    <h3>〔 <code><b>Boot Safety</b></code> 〕</h3>
+  </div>
+
+  <p>
+    If the boot process takes long enough (because you lowered
+    <code>CL.block_manager.max_executions_per_tick</code> to reduce interruptions, or you have many blocks to execute),
+    some callbacks (especially <code>tick</code> and <code>onBlockStand</code>) may fire while the loader is still booting.
+    At that point, not everything may be defined yet, which can lead to errors.
+  </p>
+
+  <p><code>Solution:</code> guard the event function so it does nothing while the loader is still booting.</p>
+
+```js
+// ---------- RECOMMENDED PATTERN ----------
+// works for ANY event function that may fire during boot (tick, onBlockStand, etc.)
+// do NOT use it for onPlayerJoin
+
+tick = () => {
+  if (CL.isRunning) { return }
+  // your tick logic
+};
+
+onBlockStand = (...args) => {
+  if (CL.isRunning) { return }
+  // your onBlockStand logic
+};
 ```
 
   <div align="left">
@@ -185,7 +214,7 @@ isPrimaryBoot
  * `false` after the boot is finished.
  *
  * It can be useful to resolve conflicts,
- * when actions in callbacks depend on not initizalied states during boot.
+ * when actions in callbacks depend on not initialized states during boot.
  */
 isRunning
 
@@ -339,32 +368,12 @@ const configuration = {
       <h4><code><b>! INFO</b></code></h4>
       <ul>
         <li>Defines which in-game callbacks the loader wires and manages.</li>
+        <li>Each entry is <code>"eventName"</code> string.</li>
         <li><ins>Recommendation:</ins> include only events you actually use.</li>
         <li><code>tick</code> callback is special (handled separately).</li>
       </ul>
     </p>
   </blockquote>
-
-  <div align="left">
-    <h4>⊂ <code><b>Supported entries</b></code> ⊃</h4>
-  </div>
-
-  <ul>
-    <li>
-      <code>"eventName"</code>
-      <ul>
-        <li>uses default fallback from <code>EVENT_REGISTRY[eventName][0]</code></li>
-      </ul>
-    </li>
-    <li>
-      <code>["eventName", fallbackValue?]</code>
-      <ul>
-        <li><code>"undefined"</code> sets fallback value to actual <code>undefined</code></li>
-        <li>omitted / <code>undefined</code> uses registry fallback</li>
-        <li>any other value -- sets fallback directly as provided</li>
-      </ul>
-    </li>
-  </ul>
 
   <div align="left">
     <h4>⊂ <code><b>Event Wiring</b></code> ⊃</h4>
@@ -380,8 +389,7 @@ const configuration = {
     <p>
       <h4><code><b>! NOTE</b></code></h4>
       <ul>
-        <li>Changing <code>ACTIVE_EVENTS</code> at runtime only affects fallback values setup on reboot.</li>
-        <li>Event wrapper installation is created on world init based on the initial list (i.e. can be changed only in real <code>World Code</code>).</li>
+        <li>Event wrapper installation is created on world code init based on the initial list (i.e. can be changed only in real <code>World Code</code>).</li>
       </ul>
     </p>
   </blockquote>
@@ -565,22 +573,47 @@ const configuration = {
     <p>
       <h4><code><b>! INFO</b></code></h4>
       <ul>
-        <li>Map (object): <code>eventName -> [fallbackValue?, interruptionStatus?, retryLimit?]</code> or <code>null</code></li>
-        <li><code>fallbackValue</code> is applied via <code>api.setCallbackValueFallback(eventName, value)</code></li>
-        <li><code>interruptionStatus</code> is converted to boolean</li>
-        <li><code>retryLimit</code> is integer-floored and used only when framework is enabled</li>
+        <li>Map (object): <code>eventName -&gt; null</code> or <code>[fallbackValue?, interruptionStatus?, retryLimit?].</code></li>
+        <li>
+          <code>fallbackValue</code> is applied via
+          <code>api.setCallbackValueFallback(eventName, value)</code>
+          and can be <ins>any</ins> type/value.
+        </li>
+        <li><code>interruptionStatus</code> is converted to boolean.</li>
+        <li><code>retryLimit</code> is integer-floored and used only when framework is enabled.</li>
       </ul>
     </p>
   </blockquote>
+
+  <div align="left">
+    <h4>⊂ <code><b>Supported entries</b></code> ⊃</h4>
+  </div>
+
+  <ul>
+    <li>
+      <code>null</code>
+      <ul>
+        <li>uses defaults for all 3 fields</li>
+      </ul>
+    </li>
+    <li>
+      <code>[fallbackValue?, interruptionStatus?, retryLimit?]</code>
+      <ul>
+        <li><code>fallbackValue</code> — any value (default: <code>undefined</code>)</li>
+        <li><code>interruptionStatus</code> — boolean (default: <code>false</code>)</li>
+        <li><code>retryLimit</code> — integer (default: <code>event_manager.default_retry_limit</code>)</li>
+      </ul>
+    </li>
+  </ul>
 
   <blockquote>
     <p>
       <h4><code><b>! NOTE</b></code></h4>
       <ul>
         <li>Do not rename keys inside <code>EVENT_REGISTRY</code> (keep valid callback names).</li>
-        <li>You may remove registry entries only for events you will never put into <code>ACTIVE_EVENTS</code>.</li>
-        <li>Registry values should be changed only in real <code>World Code</code>.</li>
-        <li><code>tick</code> is special and can be <code>null</code>.</li>
+        <li>You may remove entries only for events you will never include in <code>ACTIVE_EVENTS</code>.</li>
+        <li>Change registry values only in real <code>World Code</code>.</li>
+        <li><code>tick</code> is special and always <code>null</code>.</li>
       </ul>
     </p>
   </blockquote>
@@ -735,7 +768,7 @@ CL.reboot();
       <h4><code><b>! INFO</b></code></h4>
       <ul>
         <li>This section documents how the built-in format works (useful for debugging or for custom tooling).</li>
-        <li>Storage consists of a <b>registry unit</b> and many <b>storage units</b>.</li>
+        <li>Storage consists of a <ins>registry unit</ins> and many <ins>storage units</ins>.</li>
       </ul>
     </p>
   </blockquote>
@@ -860,8 +893,8 @@ if (myId === null) {
 
   <p>
     <code>16000</code> chars — real <code>World Code</code> capacity.<br>
-    <code>13610</code> chars — default loader minified source.<br>
-    <code>15890</code> chars — configuration fully populated
+    <code>13230</code> chars — default loader minified source.<br>
+    <code>15450</code> chars — configuration fully populated
     (<code>ACTIVE_EVENTS</code> maxed out, all entries in <code>EVENT_REGISTRY</code> fully defined).
   </p>
 
@@ -870,13 +903,13 @@ if (myId === null) {
   </p>
 
   <ul>
-    <li><code>[-100000,-100000,-100000]</code> → ~27 chars</li>
-    <li><code>[10,10,10]</code> → ~12 chars</li>
+    <li><code>[-100000,-100000,-100000],</code> -> ~27 chars</li>
+    <li><code>[10,10,10],</code> -> ~12 chars</li>
   </ul>
 
   <p>
-    This leaves ~<code>110</code> free characters, enough for approximately
-    <code>4–9+</code> block positions directly inside real <code>World Code</code>.
+    This leaves ~<code>550</code> free characters, enough for approximately
+    <code>20–45+</code> block positions directly inside real <code>World Code</code>.
   </p>
 
   <div align="left">
@@ -987,7 +1020,7 @@ eventName = (...args) => {
 
 ---
 
-<a id="installation"></a>
+<a id="example"></a>
 <details open>
   <summary>
     <div align="center">
@@ -1018,11 +1051,6 @@ eventName = (...args) => {
       <code>"Unregistered active events: ..."</code><br>
       The event exists in <code>ACTIVE_EVENTS</code> but is missing from <code>EVENT_REGISTRY</code>.
       Fix the name or add an entry to the registry.
-    </li>
-    <li>
-      <code>"Invalid active events: ..."</code><br>
-      The loader couldn't wire the event (usually due to runtime changes to <code>ACTIVE_EVENTS</code>).
-      Keep the event in the initial real <code>World Code</code> list, or do correct runtime changes before reboot.
     </li>
     <li>
       <code>"Reboot request was denied."</code><br>

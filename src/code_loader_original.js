@@ -4,8 +4,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 const configuration = {
-  // [[eventName, fallbackValue?], ...]
-  // [[string, boolean|string|number|object|null|"undefined"], ...]
+  // [eventName, ...]
+  // [string, ...]
   ACTIVE_EVENTS: [
     // ...
   ],
@@ -37,69 +37,69 @@ const configuration = {
   },
 
   // eventName -> [fallbackValue?, interruptionStatus?, retryLimit?]
-  // string -> [boolean|string|number|object|null|undefined, boolean|null, number|null]
+  // string -> [any, boolean|null, number|null]
   EVENT_REGISTRY: {
-    "tick": null, // special event
-    "onClose": [false],
-    "onPlayerJoin": [false],
-    "onPlayerLeave": [false],
-    "onPlayerJump": [false],
-    "onRespawnRequest": [[0, -100000, 0]],
-    "playerCommand": [null],
-    "onPlayerChat": [null],
-    "onPlayerChangeBlock": ["preventChange"],
-    "onPlayerDropItem": ["preventDrop"],
-    "onPlayerPickedUpItem": [false],
-    "onPlayerSelectInventorySlot": [false],
-    "onBlockStand": [false],
-    "onPlayerAttemptCraft": ["preventCraft"],
-    "onPlayerCraft": [false],
-    "onPlayerAttemptOpenChest": ["preventOpen"],
-    "onPlayerOpenedChest": [false],
-    "onPlayerMoveItemOutOfInventory": ["preventChange"],
-    "onPlayerMoveInvenItem": ["preventChange"],
-    "onPlayerMoveItemIntoIdxs": ["preventChange"],
-    "onPlayerSwapInvenSlots": ["preventChange"],
-    "onPlayerMoveInvenItemWithAmt": ["preventChange"],
-    "onPlayerAttemptAltAction": ["preventAction"],
-    "onPlayerAltAction": [false],
-    "onPlayerClick": [false],
-    "onClientOptionUpdated": [false],
-    "onMobSettingUpdated": [false],
-    "onInventoryUpdated": [false],
-    "onChestUpdated": [false],
-    "onWorldChangeBlock": ["preventChange"],
-    "onCreateBloxdMeshEntity": [false],
-    "onEntityCollision": [false],
-    "onPlayerAttemptSpawnMob": ["preventSpawn"],
-    "onWorldAttemptSpawnMob": ["preventSpawn"],
-    "onPlayerSpawnMob": [false],
-    "onWorldSpawnMob": [false],
-    "onWorldAttemptDespawnMob": ["preventDespawn"],
-    "onMobDespawned": [false],
-    "onPlayerAttack": [false],
-    "onPlayerDamagingOtherPlayer": ["preventDamage"],
-    "onPlayerDamagingMob": ["preventDamage"],
-    "onMobDamagingPlayer": ["preventDamage"],
-    "onMobDamagingOtherMob": ["preventDamage"],
-    "onAttemptKillPlayer": ["preventDeath"],
-    "onPlayerKilledOtherPlayer": ["keepInventory"],
-    "onMobKilledPlayer": ["keepInventory"],
-    "onPlayerKilledMob": ["preventDrop"],
-    "onMobKilledOtherMob": ["preventDrop"],
-    "onPlayerPotionEffect": [false],
-    "onPlayerDamagingMeshEntity": [false],
-    "onPlayerBreakMeshEntity": [false],
-    "onPlayerUsedThrowable": [false],
-    "onPlayerThrowableHitTerrain": [false],
-    "onTouchscreenActionButton": [false],
-    "onTaskClaimed": [false],
-    "onChunkLoaded": [false],
-    "onPlayerRequestChunk": [false],
-    "onItemDropCreated": [false],
-    "onPlayerStartChargingItem": [false],
-    "onPlayerFinishChargingItem": [false],
-    "doPeriodicSave": [false],
+    tick: null, // special event
+    onClose: [],
+    onPlayerJoin: [],
+    onPlayerLeave: [],
+    onPlayerJump: [],
+    onRespawnRequest: [[0, -10000, 0]],
+    playerCommand: [undefined],
+    onPlayerChat: [null],
+    onPlayerChangeBlock: ["preventChange"],
+    onPlayerDropItem: ["preventDrop"],
+    onPlayerPickedUpItem: [],
+    onPlayerSelectInventorySlot: [],
+    onBlockStand: [],
+    onPlayerAttemptCraft: ["preventCraft"],
+    onPlayerCraft: [],
+    onPlayerAttemptOpenChest: ["preventOpen"],
+    onPlayerOpenedChest: [],
+    onPlayerMoveItemOutOfInventory: ["preventChange"],
+    onPlayerMoveInvenItem: ["preventChange"],
+    onPlayerMoveItemIntoIdxs: ["preventChange"],
+    onPlayerSwapInvenSlots: ["preventChange"],
+    onPlayerMoveInvenItemWithAmt: ["preventChange"],
+    onPlayerAttemptAltAction: ["preventAction"],
+    onPlayerAltAction: [],
+    onPlayerClick: [],
+    onClientOptionUpdated: [],
+    onMobSettingUpdated: [],
+    onInventoryUpdated: [],
+    onChestUpdated: [],
+    onWorldChangeBlock: ["preventChange"],
+    onCreateBloxdMeshEntity: [],
+    onEntityCollision: [],
+    onPlayerAttemptSpawnMob: ["preventSpawn"],
+    onWorldAttemptSpawnMob: ["preventSpawn"],
+    onPlayerSpawnMob: [],
+    onWorldSpawnMob: [],
+    onWorldAttemptDespawnMob: ["preventDespawn"],
+    onMobDespawned: [],
+    onPlayerAttack: [],
+    onPlayerDamagingOtherPlayer: ["preventDamage"],
+    onPlayerDamagingMob: ["preventDamage"],
+    onMobDamagingPlayer: ["preventDamage"],
+    onMobDamagingOtherMob: ["preventDamage"],
+    onAttemptKillPlayer: ["preventDeath"],
+    onPlayerKilledOtherPlayer: ["keepInventory"],
+    onMobKilledPlayer: ["keepInventory"],
+    onPlayerKilledMob: ["preventDrop"],
+    onMobKilledOtherMob: ["preventDrop"],
+    onPlayerPotionEffect: [],
+    onPlayerDamagingMeshEntity: [],
+    onPlayerBreakMeshEntity: [],
+    onPlayerUsedThrowable: [],
+    onPlayerThrowableHitTerrain: [],
+    onTouchscreenActionButton: [],
+    onTaskClaimed: [],
+    onChunkLoaded: [],
+    onPlayerRequestChunk: [],
+    onItemDropCreated: [],
+    onPlayerStartChargingItem: [],
+    onPlayerFinishChargingItem: [],
+    doPeriodicSave: [],
   },
 
   STYLES: [
@@ -138,14 +138,12 @@ const EventManager = {
   isEventActive: {}, // eventName -> true
   unregisteredActiveEvents: [], // [eventName, ...]
 
-  invalidActiveEvents: null, // [eventName, ...]
   established: false,
 
   primarySetup: null,
   primaryInstall: null,
   establish: null,
   resetHandlers: null,
-  setupFallbacks: null,
 };
 const TickMultiplexer = {
   init: null,
@@ -285,18 +283,15 @@ const CodeLoader = {
   let _primaryInstallCursor = 0;
   let _primaryActiveEvents = []; // [eventName, ...]
 
-  let _activeEvents;
-  let _eventRegistry;
   let _resetCursor;
-  let _setupCursor;
 
   _EM.primarySetup = () => {
     if (_EM.isPrimarySetupDone) {
       return;
     }
 
-    _eventRegistry = _CF.EVENT_REGISTRY;
-    _activeEvents = _CF.ACTIVE_EVENTS;
+    const eventRegistry = _CF.EVENT_REGISTRY;
+    const activeEvents = _CF.ACTIVE_EVENTS;
     const thisConfig = _CF.event_manager;
     const isFrameworkEnabled = !!thisConfig.is_framework_enabled;
     let defaultRetryLimit = thisConfig.default_retry_limit | 0;
@@ -307,9 +302,9 @@ const CodeLoader = {
     const unregisteredActiveEvents = _EM.unregisteredActiveEvents;
 
     let primaryIndex = 0;
-    const activeEventsCount = _activeEvents.length;
+    const activeEventsCount = activeEvents.length;
     while (primaryIndex < activeEventsCount) {
-      let eventName = _activeEvents[primaryIndex];
+      let eventName = activeEvents[primaryIndex];
       if (eventName instanceof Array) {
         eventName = eventName[0];
       }
@@ -317,7 +312,7 @@ const CodeLoader = {
         primaryIndex++;
         continue;
       }
-      let registryEntry = _eventRegistry[eventName];
+      let registryEntry = eventRegistry[eventName];
       if (registryEntry === undefined) {
         unregisteredActiveEvents[unregisteredActiveEvents.length] = eventName;
         primaryIndex++;
@@ -326,8 +321,9 @@ const CodeLoader = {
       _primaryActiveEvents[_primaryActiveEvents.length] = eventName;
       isEventActive[eventName] = true;
       if (!(registryEntry instanceof Array)) {
-        registryEntry = _eventRegistry[eventName] = [false];
+        registryEntry = eventRegistry[eventName] = [];
       }
+      api_setCallbackValueFallback(eventName, registryEntry[0]);
       const interruptionStatus = !!registryEntry[1];
       if (isFrameworkEnabled && interruptionStatus) {
         let retryLimit = registryEntry[2];
@@ -394,10 +390,7 @@ const CodeLoader = {
     if (_EM.established) {
       return;
     }
-    _activeEvents = _CF.ACTIVE_EVENTS;
-    _EM.invalidActiveEvents = [];
     _resetCursor = 0;
-    _setupCursor = 0;
     _EM.established = true;
   };
 
@@ -407,38 +400,6 @@ const CodeLoader = {
     while (_resetCursor < activeEventsCount) {
       delegator[_primaryActiveEvents[_resetCursor]] = _NOOP;
       _resetCursor++;
-    }
-  };
-
-  _EM.setupFallbacks = () => {
-    const isEventActive = _EM.isEventActive;
-    const activeEventsCount = _activeEvents.length;
-    let eventEntry, eventName;
-    while (_setupCursor < activeEventsCount) {
-      eventEntry = _activeEvents[_setupCursor];
-      eventName = eventEntry;
-      if (eventEntry instanceof Array) {
-        eventName = eventEntry[0];
-      }
-      if (eventName === "tick") {
-        _setupCursor++;
-        continue;
-      }
-      if (isEventActive[eventName]) {
-        let fallbackValue;
-        if (eventEntry instanceof Array) {
-          fallbackValue = eventEntry[1];
-        }
-        if (fallbackValue === undefined) {
-          fallbackValue = _eventRegistry[eventName][0];
-        } else if (fallbackValue === "undefined") {
-          fallbackValue = undefined;
-        }
-        api_setCallbackValueFallback(eventName, fallbackValue);
-      } else {
-        _EM.invalidActiveEvents[_EM.invalidActiveEvents.length] = eventName;
-      }
-      _setupCursor++;
     }
   };
 }
@@ -901,9 +862,6 @@ const CodeLoader = {
     if (_EM.unregisteredActiveEvents.length) {
       _log(_EMprefix + "Unregistered active events: \"" + _EM.unregisteredActiveEvents.join("\", \"") + "\".", 1);
     }
-    if (_EM.invalidActiveEvents.length) {
-      _log(_EMprefix + "Invalid active events: \"" + _EM.invalidActiveEvents.join("\", \"") + "\".", 1);
-    }
     if (showBoot) {
       _OM.bootLogs(showErrors);
     }
@@ -985,7 +943,6 @@ const CodeLoader = {
         } else {
           _EM.resetHandlers();
         }
-        _EM.setupFallbacks();
         _OM.phase = 4;
       }
 

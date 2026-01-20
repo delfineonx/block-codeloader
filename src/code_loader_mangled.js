@@ -30,67 +30,67 @@ const configuration={
     default_retry_limit: 2
   },
   EVENT_REGISTRY:{
-    tick:null,
-    onClose:[!1],
-    onPlayerJoin:[!1],
-    onPlayerLeave:[!1],
-    onPlayerJump:[!1],
-    onRespawnRequest:[[0,-100000,0]],
-    playerCommand:[null],
-    onPlayerChat:[null],
-    onPlayerChangeBlock:["preventChange"],
-    onPlayerDropItem:["preventDrop"],
-    onPlayerPickedUpItem:[!1],
-    onPlayerSelectInventorySlot:[!1],
-    onBlockStand:[!1],
-    onPlayerAttemptCraft:["preventCraft"],
-    onPlayerCraft:[!1],
-    onPlayerAttemptOpenChest:["preventOpen"],
-    onPlayerOpenedChest:[!1],
-    onPlayerMoveItemOutOfInventory:["preventChange"],
-    onPlayerMoveInvenItem:["preventChange"],
-    onPlayerMoveItemIntoIdxs:["preventChange"],
-    onPlayerSwapInvenSlots:["preventChange"],
-    onPlayerMoveInvenItemWithAmt:["preventChange"],
-    onPlayerAttemptAltAction:["preventAction"],
-    onPlayerAltAction:[!1],
-    onPlayerClick:[!1],
-    onClientOptionUpdated:[!1],
-    onMobSettingUpdated:[!1],
-    onInventoryUpdated:[!1],
-    onChestUpdated:[!1],
-    onWorldChangeBlock:["preventChange"],
-    onCreateBloxdMeshEntity:[!1],
-    onEntityCollision:[!1],
-    onPlayerAttemptSpawnMob:["preventSpawn"],
-    onWorldAttemptSpawnMob:["preventSpawn"],
-    onPlayerSpawnMob:[!1],
-    onWorldSpawnMob:[!1],
-    onWorldAttemptDespawnMob:["preventDespawn"],
-    onMobDespawned:[!1],
-    onPlayerAttack:[!1],
-    onPlayerDamagingOtherPlayer:["preventDamage"],
-    onPlayerDamagingMob:["preventDamage"],
-    onMobDamagingPlayer:["preventDamage"],
-    onMobDamagingOtherMob:["preventDamage"],
-    onAttemptKillPlayer:["preventDeath"],
-    onPlayerKilledOtherPlayer:["keepInventory"],
-    onMobKilledPlayer:["keepInventory"],
-    onPlayerKilledMob:["preventDrop"],
-    onMobKilledOtherMob:["preventDrop"],
-    onPlayerPotionEffect:[!1],
-    onPlayerDamagingMeshEntity:[!1],
-    onPlayerBreakMeshEntity:[!1],
-    onPlayerUsedThrowable:[!1],
-    onPlayerThrowableHitTerrain:[!1],
-    onTouchscreenActionButton:[!1],
-    onTaskClaimed:[!1],
-    onChunkLoaded:[!1],
-    onPlayerRequestChunk:[!1],
-    onItemDropCreated:[!1],
-    onPlayerStartChargingItem:[!1],
-    onPlayerFinishChargingItem:[!1],
-    doPeriodicSave:[!1],
+    tick: null,
+    onClose: [],
+    onPlayerJoin: [],
+    onPlayerLeave: [],
+    onPlayerJump: [],
+    onRespawnRequest: [[0,-10000,0]],
+    playerCommand: [undefined],
+    onPlayerChat: [null],
+    onPlayerChangeBlock: ["preventChange"],
+    onPlayerDropItem: ["preventDrop"],
+    onPlayerPickedUpItem: [],
+    onPlayerSelectInventorySlot: [],
+    onBlockStand: [],
+    onPlayerAttemptCraft: ["preventCraft"],
+    onPlayerCraft: [],
+    onPlayerAttemptOpenChest: ["preventOpen"],
+    onPlayerOpenedChest: [],
+    onPlayerMoveItemOutOfInventory: ["preventChange"],
+    onPlayerMoveInvenItem: ["preventChange"],
+    onPlayerMoveItemIntoIdxs: ["preventChange"],
+    onPlayerSwapInvenSlots: ["preventChange"],
+    onPlayerMoveInvenItemWithAmt: ["preventChange"],
+    onPlayerAttemptAltAction: ["preventAction"],
+    onPlayerAltAction: [],
+    onPlayerClick: [],
+    onClientOptionUpdated: [],
+    onMobSettingUpdated: [],
+    onInventoryUpdated: [],
+    onChestUpdated: [],
+    onWorldChangeBlock: ["preventChange"],
+    onCreateBloxdMeshEntity: [],
+    onEntityCollision: [],
+    onPlayerAttemptSpawnMob: ["preventSpawn"],
+    onWorldAttemptSpawnMob: ["preventSpawn"],
+    onPlayerSpawnMob: [],
+    onWorldSpawnMob: [],
+    onWorldAttemptDespawnMob: ["preventDespawn"],
+    onMobDespawned: [],
+    onPlayerAttack: [],
+    onPlayerDamagingOtherPlayer: ["preventDamage"],
+    onPlayerDamagingMob: ["preventDamage"],
+    onMobDamagingPlayer: ["preventDamage"],
+    onMobDamagingOtherMob: ["preventDamage"],
+    onAttemptKillPlayer: ["preventDeath"],
+    onPlayerKilledOtherPlayer: ["keepInventory"],
+    onMobKilledPlayer: ["keepInventory"],
+    onPlayerKilledMob: ["preventDrop"],
+    onMobKilledOtherMob: ["preventDrop"],
+    onPlayerPotionEffect: [],
+    onPlayerDamagingMeshEntity: [],
+    onPlayerBreakMeshEntity: [],
+    onPlayerUsedThrowable: [],
+    onPlayerThrowableHitTerrain: [],
+    onTouchscreenActionButton: [],
+    onTaskClaimed: [],
+    onChunkLoaded: [],
+    onPlayerRequestChunk: [],
+    onItemDropCreated: [],
+    onPlayerStartChargingItem: [],
+    onPlayerFinishChargingItem: [],
+    doPeriodicSave: [],
   },
   STYLES:[
     "#FF775E","500","0.95rem",
@@ -126,13 +126,11 @@ _F={
   c:{},
   d:{},
   e:[],
-  f:null,
-  g:!1,
+  f:!1,
+  g:null,
   h:null,
   i:null,
-  j:null,
-  k:null,
-  l:null
+  j:null
 },
 _G={
   a:null,
@@ -249,76 +247,74 @@ _L={
   D=api.setCallbackValueFallback,
   E=0,
   F=[],
-  G,
-  H,
-  I,
-  J;
-  C.h=()=>{
+  G;
+  C.g=()=>{
     if(C.a){
       return
     }
-    H=A.EVENT_REGISTRY;
-    G=A.ACTIVE_EVENTS;
-    let a=A.event_manager,
-    b=!!a.is_framework_enabled,
-    c=a.default_retry_limit|0;
-    c=(c&~(c>>31))+(-c>>31)+1;
-    let d=C.c,
-    e=C.d,
-    f=C.e,
-    g=0,
-    h=G.length;
-    while(g<h){
-      let i=G[g];
-      if(i instanceof Array){
-        i=i[0]
+    let a=A.EVENT_REGISTRY,
+    b=A.ACTIVE_EVENTS,
+    c=A.event_manager,
+    d=!!c.is_framework_enabled,
+    e=c.default_retry_limit|0;
+    e=(e&~(e>>31))+(-e>>31)+1;
+    let f=C.c,
+    g=C.d,
+    h=C.e,
+    i=0,
+    j=b.length;
+    while(i<j){
+      let k=b[i];
+      if(k instanceof Array){
+        k=k[0]
       }
-      if(i==="tick"){
-        g++;
+      if(k==="tick"){
+        i++;
         continue
       }
-      let j=H[i];
-      if(j===void 0){
-        f[f.length]=i;
-        g++;
+      let l=a[k];
+      if(l===void 0){
+        h[h.length]=k;
+        i++;
         continue
       }
-      F[F.length]=i;
-      e[i]=!0;
-      if(!(j instanceof Array)){
-        j=H[i]=[!1]
+      F[F.length]=k;
+      g[k]=!0;
+      if(!(l instanceof Array)){
+        l=a[k]=[!1]
       }
-      let k=!!j[1];
-      if(b&&k){
-        let l=j[2];
-        if(l==null){
-          l=c
+      D(k,l[0]);
+      let m=!!l[1];
+      if(d&&m){
+        let n=l[2];
+        if(n==null){
+          n=e
         }
-        l|=0;
-        d[i]=_A;
-        globalThis[i]=function m(n,o,p,q,r,s,t,u,v){
+        n|=0;
+        f[k]=_A;
+        globalThis[k]=function o(p,q,r,s,t,u,v,w,x){
           B.state=1;
-          B.fn=m;
-          B.args=[n,o,p,q,r,s,t,u,v];
-          B.limit=l;
+          B.fn=o;
+          B.args=[p,q,r,s,t,u,v,w,x];
+          B.limit=n;
           B.phase=1048576;
           try{
-            return d[i](n,o,p,q,r,s,t,u,v)
+            return f[k](p,q,r,s,t,u,v,w,x)
           }finally{
             B.state=0
           }
         }
       }else{
-        d[i]=_A;
-        globalThis[i]=function(n,o,p,q,r,s,t,u,v){
-          return d[i](n,o,p,q,r,s,t,u,v)
+        f[k]=_A;
+        globalThis[k]=function(p,q,r,s,t,u,v,w,x){
+          return f[k](p,q,r,s,t,u,v,w,x)
         }
       }
-      g++
+      i++
     }
-    e.tick=!0
+    g.tick=!0
   };
-  C.i=()=>{
+  C.h=()=>{
     let a=C.c,
     b=F.length;
     while(E<b){
@@ -348,53 +344,19 @@ _L={
       get:()=>a.tick
     })
   };
-  C.j=()=>{
-    if(C.g){
+  C.i=()=>{
+    if(C.f){
       return
     }
-    G=A.ACTIVE_EVENTS;
-    C.f=[];
-    I=0;
-    J=0;
-    C.g=!0
+    G=0;
+    C.f=!0
   };
-  C.k=()=>{
+  C.j=()=>{
     let a=C.c,
     b=F.length;
-    while(I<b){
-      a[F[I]]=_A;
-      I++
-    }
-  };
-  C.l=()=>{
-    let a=C.d,
-    b=G.length,
-    c,d;
-    while(J<b){
-      c=G[J];
-      d=c;
-      if(c instanceof Array){
-        d=c[0]
-      }
-      if(d==="tick"){
-        J++;
-        continue
-      }
-      if(a[d]){
-        let e;
-        if(c instanceof Array){
-          e=c[1]
-        }
-        if(e===void 0){
-          e=H[d][0]
-        }else if(e==="undefined"){
-          e=void 0
-        }
-        D(d,e)
-      }else{
-        C.f[C.f.length]=d
-      }
-      J++
+    while(G<b){
+      a[F[G]]=_A;
+      G++
     }
   }
 }
@@ -800,9 +762,6 @@ _L={
     if(B.e.length){
       _C(H+'Unregistered active events: "'+B.e.join('", "')+'".',1)
     }
-    if(B.f.length){
-      _C(H+'Invalid active events: "'+B.f.join('", "')+'".',1)
-    }
     if(a){
       F.d(b)
     }
@@ -841,7 +800,7 @@ _L={
         N=!!f.show_error_logs;
         O=!!f.show_execution_logs;
         P=-1;
-        B.g=!1;
+        B.f=!1;
         C.b=!1;
         D.a=!1;
         E.h=!1;
@@ -855,7 +814,7 @@ _L={
         F.a=2
       }
       if(F.a===2){
-        B.j();
+        B.i();
         C.c();
         if(B.d.onPlayerJoin){
           D.b()
@@ -865,11 +824,10 @@ _L={
       }
       if(F.a===3){
         if(F.b){
-          B.i()
+          B.h()
         }else{
-          B.k()
+          B.j()
         }
-        B.l();
         F.a=4
       }
       if(F.a===4){
@@ -1200,7 +1158,7 @@ try{
     B.tick(50);
     A.tick()
   };
-  _F.h();
+  _F.g();
   let C=_D.STYLES,
   D=_C.STYLES=[];
   for(let E=0;E<4;E++){

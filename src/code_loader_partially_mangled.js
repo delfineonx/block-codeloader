@@ -30,67 +30,67 @@ const configuration={
     default_retry_limit: 2
   },
   EVENT_REGISTRY:{
-    tick:null,
-    onClose:[!1],
-    onPlayerJoin:[!1],
-    onPlayerLeave:[!1],
-    onPlayerJump:[!1],
-    onRespawnRequest:[[0,-100000,0]],
-    playerCommand:[null],
-    onPlayerChat:[null],
-    onPlayerChangeBlock:["preventChange"],
-    onPlayerDropItem:["preventDrop"],
-    onPlayerPickedUpItem:[!1],
-    onPlayerSelectInventorySlot:[!1],
-    onBlockStand:[!1],
-    onPlayerAttemptCraft:["preventCraft"],
-    onPlayerCraft:[!1],
-    onPlayerAttemptOpenChest:["preventOpen"],
-    onPlayerOpenedChest:[!1],
-    onPlayerMoveItemOutOfInventory:["preventChange"],
-    onPlayerMoveInvenItem:["preventChange"],
-    onPlayerMoveItemIntoIdxs:["preventChange"],
-    onPlayerSwapInvenSlots:["preventChange"],
-    onPlayerMoveInvenItemWithAmt:["preventChange"],
-    onPlayerAttemptAltAction:["preventAction"],
-    onPlayerAltAction:[!1],
-    onPlayerClick:[!1],
-    onClientOptionUpdated:[!1],
-    onMobSettingUpdated:[!1],
-    onInventoryUpdated:[!1],
-    onChestUpdated:[!1],
-    onWorldChangeBlock:["preventChange"],
-    onCreateBloxdMeshEntity:[!1],
-    onEntityCollision:[!1],
-    onPlayerAttemptSpawnMob:["preventSpawn"],
-    onWorldAttemptSpawnMob:["preventSpawn"],
-    onPlayerSpawnMob:[!1],
-    onWorldSpawnMob:[!1],
-    onWorldAttemptDespawnMob:["preventDespawn"],
-    onMobDespawned:[!1],
-    onPlayerAttack:[!1],
-    onPlayerDamagingOtherPlayer:["preventDamage"],
-    onPlayerDamagingMob:["preventDamage"],
-    onMobDamagingPlayer:["preventDamage"],
-    onMobDamagingOtherMob:["preventDamage"],
-    onAttemptKillPlayer:["preventDeath"],
-    onPlayerKilledOtherPlayer:["keepInventory"],
-    onMobKilledPlayer:["keepInventory"],
-    onPlayerKilledMob:["preventDrop"],
-    onMobKilledOtherMob:["preventDrop"],
-    onPlayerPotionEffect:[!1],
-    onPlayerDamagingMeshEntity:[!1],
-    onPlayerBreakMeshEntity:[!1],
-    onPlayerUsedThrowable:[!1],
-    onPlayerThrowableHitTerrain:[!1],
-    onTouchscreenActionButton:[!1],
-    onTaskClaimed:[!1],
-    onChunkLoaded:[!1],
-    onPlayerRequestChunk:[!1],
-    onItemDropCreated:[!1],
-    onPlayerStartChargingItem:[!1],
-    onPlayerFinishChargingItem:[!1],
-    doPeriodicSave:[!1],
+    tick: null,
+    onClose: [],
+    onPlayerJoin: [],
+    onPlayerLeave: [],
+    onPlayerJump: [],
+    onRespawnRequest: [[0,-10000,0]],
+    playerCommand: [undefined],
+    onPlayerChat: [null],
+    onPlayerChangeBlock: ["preventChange"],
+    onPlayerDropItem: ["preventDrop"],
+    onPlayerPickedUpItem: [],
+    onPlayerSelectInventorySlot: [],
+    onBlockStand: [],
+    onPlayerAttemptCraft: ["preventCraft"],
+    onPlayerCraft: [],
+    onPlayerAttemptOpenChest: ["preventOpen"],
+    onPlayerOpenedChest: [],
+    onPlayerMoveItemOutOfInventory: ["preventChange"],
+    onPlayerMoveInvenItem: ["preventChange"],
+    onPlayerMoveItemIntoIdxs: ["preventChange"],
+    onPlayerSwapInvenSlots: ["preventChange"],
+    onPlayerMoveInvenItemWithAmt: ["preventChange"],
+    onPlayerAttemptAltAction: ["preventAction"],
+    onPlayerAltAction: [],
+    onPlayerClick: [],
+    onClientOptionUpdated: [],
+    onMobSettingUpdated: [],
+    onInventoryUpdated: [],
+    onChestUpdated: [],
+    onWorldChangeBlock: ["preventChange"],
+    onCreateBloxdMeshEntity: [],
+    onEntityCollision: [],
+    onPlayerAttemptSpawnMob: ["preventSpawn"],
+    onWorldAttemptSpawnMob: ["preventSpawn"],
+    onPlayerSpawnMob: [],
+    onWorldSpawnMob: [],
+    onWorldAttemptDespawnMob: ["preventDespawn"],
+    onMobDespawned: [],
+    onPlayerAttack: [],
+    onPlayerDamagingOtherPlayer: ["preventDamage"],
+    onPlayerDamagingMob: ["preventDamage"],
+    onMobDamagingPlayer: ["preventDamage"],
+    onMobDamagingOtherMob: ["preventDamage"],
+    onAttemptKillPlayer: ["preventDeath"],
+    onPlayerKilledOtherPlayer: ["keepInventory"],
+    onMobKilledPlayer: ["keepInventory"],
+    onPlayerKilledMob: ["preventDrop"],
+    onMobKilledOtherMob: ["preventDrop"],
+    onPlayerPotionEffect: [],
+    onPlayerDamagingMeshEntity: [],
+    onPlayerBreakMeshEntity: [],
+    onPlayerUsedThrowable: [],
+    onPlayerThrowableHitTerrain: [],
+    onTouchscreenActionButton: [],
+    onTaskClaimed: [],
+    onChunkLoaded: [],
+    onPlayerRequestChunk: [],
+    onItemDropCreated: [],
+    onPlayerStartChargingItem: [],
+    onPlayerFinishChargingItem: [],
+    doPeriodicSave: [],
   },
   STYLES:[
     "#FF775E","500","0.95rem",
@@ -125,13 +125,11 @@ EventManager={
   delegator:{},
   isEventActive:{},
   unregisteredActiveEvents:[],
-  invalidActiveEvents:null,
   established:!1,
   primarySetup:null,
   primaryInstall:null,
   establish:null,
-  resetHandlers:null,
-  setupFallbacks:null
+  resetHandlers:null
 },
 TickMultiplexer={
   init:null,
@@ -248,17 +246,14 @@ CodeLoader={
   api_setCallbackValueFallback=api.setCallbackValueFallback,
   _primaryInstallCursor=0,
   _primaryActiveEvents=[],
-  _activeEvents,
-  _eventRegistry,
-  _resetCursor,
-  _setupCursor;
+  _resetCursor;
   _EM.primarySetup=()=>{
     if(_EM.isPrimarySetupDone){
       return
     }
-    _eventRegistry=_CF.EVENT_REGISTRY;
-    _activeEvents=_CF.ACTIVE_EVENTS;
-    let thisConfig=_CF.event_manager,
+    let eventRegistry=_CF.EVENT_REGISTRY,
+    activeEvents=_CF.ACTIVE_EVENTS,
+    thisConfig=_CF.event_manager,
     isFrameworkEnabled=!!thisConfig.is_framework_enabled,
     defaultRetryLimit=thisConfig.default_retry_limit|0;
     defaultRetryLimit=(defaultRetryLimit&~(defaultRetryLimit>>31))+(-defaultRetryLimit>>31)+1;
@@ -266,9 +261,9 @@ CodeLoader={
     isEventActive=_EM.isEventActive,
     unregisteredActiveEvents=_EM.unregisteredActiveEvents,
     primaryIndex=0,
-    activeEventsCount=_activeEvents.length;
+    activeEventsCount=activeEvents.length;
     while(primaryIndex<activeEventsCount){
-      let eventName=_activeEvents[primaryIndex];
+      let eventName=activeEvents[primaryIndex];
       if(eventName instanceof Array){
         eventName=eventName[0]
       }
@@ -276,7 +271,7 @@ CodeLoader={
         primaryIndex++;
         continue
       }
-      let registryEntry=_eventRegistry[eventName];
+      let registryEntry=eventRegistry[eventName];
       if(registryEntry===void 0){
         unregisteredActiveEvents[unregisteredActiveEvents.length]=eventName;
         primaryIndex++;
@@ -285,8 +280,9 @@ CodeLoader={
       _primaryActiveEvents[_primaryActiveEvents.length]=eventName;
       isEventActive[eventName]=!0;
       if(!(registryEntry instanceof Array)){
-        registryEntry=_eventRegistry[eventName]=[!1]
+        registryEntry=eventRegistry[eventName]=[]
       }
+      api_setCallbackValueFallback(eventName,registryEntry[0]);
       let interruptionStatus=!!registryEntry[1];
       if(isFrameworkEnabled&&interruptionStatus){
         let retryLimit=registryEntry[2];
@@ -351,10 +347,7 @@ CodeLoader={
     if(_EM.established){
       return
     }
-    _activeEvents=_CF.ACTIVE_EVENTS;
-    _EM.invalidActiveEvents=[];
     _resetCursor=0;
-    _setupCursor=0;
     _EM.established=!0
   };
   _EM.resetHandlers=()=>{
@@ -363,37 +356,6 @@ CodeLoader={
     while(_resetCursor<activeEventsCount){
       delegator[_primaryActiveEvents[_resetCursor]]=_NOOP;
       _resetCursor++
-    }
-  };
-  _EM.setupFallbacks=()=>{
-    let isEventActive=_EM.isEventActive,
-    activeEventsCount=_activeEvents.length,
-    eventEntry,eventName;
-    while(_setupCursor<activeEventsCount){
-      eventEntry=_activeEvents[_setupCursor];
-      eventName=eventEntry;
-      if(eventEntry instanceof Array){
-        eventName=eventEntry[0]
-      }
-      if(eventName==="tick"){
-        _setupCursor++;
-        continue
-      }
-      if(isEventActive[eventName]){
-        let fallbackValue;
-        if(eventEntry instanceof Array){
-          fallbackValue=eventEntry[1]
-        }
-        if(fallbackValue===void 0){
-          fallbackValue=_eventRegistry[eventName][0]
-        }else if(fallbackValue==="undefined"){
-          fallbackValue=void 0
-        }
-        api_setCallbackValueFallback(eventName,fallbackValue)
-      }else{
-        _EM.invalidActiveEvents[_EM.invalidActiveEvents.length]=eventName
-      }
-      _setupCursor++
     }
   }
 }
@@ -799,9 +761,6 @@ CodeLoader={
     if(_EM.unregisteredActiveEvents.length){
       _log(_EMprefix+'Unregistered active events: "'+_EM.unregisteredActiveEvents.join('", "')+'".',1)
     }
-    if(_EM.invalidActiveEvents.length){
-      _log(_EMprefix+'Invalid active events: "'+_EM.invalidActiveEvents.join('", "')+'".',1)
-    }
     if(showBoot){
       _OM.bootLogs(showErrors)
     }
@@ -868,7 +827,6 @@ CodeLoader={
         }else{
           _EM.resetHandlers()
         }
-        _EM.setupFallbacks();
         _OM.phase=4
       }
       if(_OM.phase===4){
