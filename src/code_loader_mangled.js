@@ -14,20 +14,20 @@ const configuration={
     boot_delay_ms: 100,
     show_boot_logs: true,
     show_error_logs: true,
-    show_execution_logs: false
+    show_execution_logs: false,
   },
   block_manager:{
-    is_chest_data: false,
+    is_chest_mode: false,
     max_executions_per_tick: 16,
-    max_errors_count: 32
+    max_errors_count: 32,
   },
   join_manager:{
     reset_on_reboot: true,
-    max_dequeue_per_tick: 16
+    max_dequeue_per_tick: 16,
   },
   event_manager:{
     is_framework_enabled: false,
-    default_retry_limit: 2
+    default_retry_limit: 2,
   },
   EVENT_REGISTRY:{
     tick: null,
@@ -101,1094 +101,1029 @@ const configuration={
 };
 
 
-const _A=function(){},
-_B="Code Loader",
-_C=(a,b)=>{
-  let c=_C.STYLES[b];
-  c[0].str=a;
-  api.broadcastMessage(c)
-},
-_D=configuration,
-_E={
-  state:0,
-  fn:()=>{},
-  args:[],
-  limit:2,
-  phase:1048576,
-  cache:null,
-  default:1048576,
-  wasInterrupted:!1,
-  tick:null
-},
-_F={
-  a:!1,
-  b:null,
-  c:{},
-  d:{},
-  e:[],
-  f:!1,
-  g:null,
-  h:null,
-  i:null,
-  j:null
-},
-_G={
-  a:null,
-  b:!1,
-  c:null,
-  d:null,
-  e:null
-},
-_H={
-  a:!1,
-  b:null,
-  c:null,
-  d:null,
-  e:null,
-  f:null
-},
-_I={
-  a:null,
-  b:null,
-  c:-1,
-  d:null,
-  e:null,
-  f:!1,
-  g:!1,
-  h:!1,
-  i:null,
-  j:null
-},
-_J={
-  a:-2,
-  b:!0,
-  c:!1,
-  d:null,
-  e:null,
-  f:null,
-  g:null,
-  h:null
-},
-_K={
-  create:null,
-  check:null,
-  build:null,
-  dispose:null,
-  tick:null
-},
-_L={
-  SM:null,
-  config:null,
-  isPrimaryBoot:!0,
-  isRunning:!1,
-  reboot:null,
-  bootLogs:null,
-  errorLogs:null,
-  executionLogs:null,
-  completeLogs:null
-};
 {
-  let A=_E,
-  B={},
-  C=[],
-  D=1,
-  E=[],
-  F=1,
-  G=1,
-  H=0;
-  Object.defineProperty(globalThis.InternalError.prototype,"name",{
-    configurable:!0,
-    get:()=>{
-      if(D){
-        if(A.state){
-          B[F++]=[A.fn,A.args,A.limit,A.phase,A.cache];
-          H++
-        }
-      }else{
-        E[3]=A.phase;
-        A.wasInterrupted=!1;
-        D=1
-      }
-      A.state=0;
-      return"InternalError"
-    }
-  });
-  A.tick=()=>{
-    A.state=0;
-    if(!H){
-      A.args=C;
-      A.cache=null;
-      return
-    }
-    D=0;
-    A.wasInterrupted=!0;
-    while(G<F){
-      E=B[G];
-      if(E[2]>0){
-        E[2]--;
-        A.phase=E[3];
-        A.cache=E[4];
-        E[0](...E[1])
-      }
-      delete B[G++];
-      H--
-    }
-    A.state=0;
-    A.args=C;
-    A.cache=null;
-    A.wasInterrupted=!1;
-    D=1
-  }
-}
-{
-  let A=_D,
-  B=_E,
-  C=_F,
-  D=api.setCallbackValueFallback,
-  E=0,
-  F=[],
-  G;
-  C.g=()=>{
-    if(C.a){
-      return
-    }
-    let a=A.EVENT_REGISTRY,
-    b=A.ACTIVE_EVENTS,
-    c=A.event_manager,
-    d=!!c.is_framework_enabled,
-    e=c.default_retry_limit|0;
-    e=(e&~(e>>31))+(-e>>31)+1;
-    let f=C.c,
-    g=C.d,
-    h=C.e,
-    i=0,
-    j=b.length;
-    while(i<j){
-      let k=b[i];
-      if(k instanceof Array){
-        k=k[0]
-      }
-      if(k==="tick"){
-        i++;
-        continue
-      }
-      let l=a[k];
-      if(l===void 0){
-        h[h.length]=k;
-        i++;
-        continue
-      }
-      F[F.length]=k;
-      g[k]=!0;
-      if(!(l instanceof Array)){
-        l=a[k]=[!1]
-      }
-      D(k,l[0]);
-      let m=!!l[1];
-      if(d&&m){
-        let n=l[2];
-        if(n==null){
-          n=e
-        }
-        n|=0;
-        f[k]=_A;
-        globalThis[k]=function o(p,q,r,s,t,u,v,w,x){
-          B.state=1;
-          B.fn=o;
-          B.args=[p,q,r,s,t,u,v,w,x];
-          B.limit=n;
-          B.phase=1048576;
-          try{
-            return f[k](p,q,r,s,t,u,v,w,x)
-          }finally{
-            B.state=0
-          }
-        }
-      }else{
-        f[k]=_A;
-        globalThis[k]=function(p,q,r,s,t,u,v,w,x){
-          return f[k](p,q,r,s,t,u,v,w,x)
-        }
-      }
-      i++
-    }
-    g.tick=!0
-  };
-  C.h=()=>{
-    let a=C.c,
-    b=F.length;
-    while(E<b){
-      let c=F[E];
-      Object.defineProperty(globalThis,c,{
-        configurable:!0,
-        set:d=>{
-          if(d instanceof Function){
-            a[c]=d
-          }else{
-            a[c]=_A
-          }
-        },
-        get:()=>a[c]
-      });
-      E++
-    }
-    Object.defineProperty(globalThis,"tick",{
-      configurable:!0,
-      set:e=>{
-        if(e instanceof Function){
-          a.tick=e
-        }else{
-          a.tick=_A
-        }
-      },
-      get:()=>a.tick
-    })
-  };
-  C.i=()=>{
-    if(C.f){
-      return
-    }
-    G=0;
-    C.f=!0
-  };
-  C.j=()=>{
-    let a=C.c,
-    b=F.length;
-    while(G<b){
-      a[F[G]]=_A;
-      G++
-    }
-  }
-}
-{
-  let A=_E,
-  B=_F,
-  C=_G,
-  D,
-  E,
-  F,
-  G;
-  C.c=()=>{
-    if(C.b){
-      return
-    }
-    D=_A;
-    C.a=_A;
-    E=_A;
-    F=!1;
-    G=!1;
-    C.b=!0
-  };
-  let H=()=>{
-    A.tick();
-    D();
-    C.a();
-    E(50)
-  };
-  C.d=()=>{
-    if(F){
-      return
-    }
-    let a=B.c;
-    Object.defineProperty(globalThis,"tick",{
-      configurable:!0,
-      set:b=>{
-        if(b instanceof Function){
-          E=b
-        }else{
-          E=_A
-        }
-      },
-      get:()=>a.tick
-    });
-    D=B.c.tick;
-    B.c.tick=H;
-    F=!0
-  };
-  C.e=()=>{
-    if(G){
-      return
-    }
-    let a=B.c;
-    Object.defineProperty(globalThis,"tick",{
-      configurable:!0,
-      set:b=>{
-        if(b instanceof Function){
-          a.tick=b
-        }else{
-          a.tick=_A
-        }
-      },
-      get:()=>a.tick
-    });
-    a.tick=E;
-    D=_A;
-    C.a=_A;
-    G=!0
-  }
-}
-{
-  let A=_D,
-  B=_E,
-  C=_F,
-  D=_H,
-  E=_J,
-  F=_B+" JM: ",
-  G,
-  H,
-  I,
-  J,
-  K,
-  L,
-  M,
-  N;
-  D.b=()=>{
-    if(D.a){
-      return
-    }
-    let a=A.join_manager;
-    G=!!a.reset_on_reboot;
-    H=a.max_dequeue_per_tick|0;
-    H=(H&~(H>>31))+(-H>>31)+1;
-    I=_A;
-    J=[];
-    if(G|!K){
-      K={}
-    }
-    L=0;
-    M=!1;
-    N=!1;
-    D.a=!0
-  };
-  let O=a=>{
-    J[J.length]=a;
-    K[a]=1
-  };
-  D.d=()=>{
-    if(M){
-      return
-    }
-    let a=C.c;
-    a.onPlayerJoin=O;
-    Object.defineProperty(globalThis,"onPlayerJoin",{
-      configurable:!0,
-      set:b=>{
-        if(b instanceof Function){
-          I=b
-        }else{
-          I=_A
-        }
-      },
-      get:()=>a.onPlayerJoin
-    });
-    M=!0
-  };
-  D.c=()=>{
-    if(G|E.b){
-      let a=api.getPlayerIds(),
-      b=0,
-      c;
-      while(c=a[b]){
-        if(!K[c]){
-          J[J.length]=c;
-          K[c]=1
-        }
-        b++
-      }
-    }
-  };
-  D.e=()=>{
-    let a=H,
-    b;
-    while(L<J.length&&a>0){
-      b=J[L];
-      if(K[b]!==2){
-        L++;
-        K[b]=2;
-        B.state=1;
-        B.fn=I;
-        B.args=[b];
-        B.limit=2;
-        B.phase=1048576;
-        try{
-          I(b)
-        }catch(c){
-          B.state=0;
-          _C(F+c.name+": "+c.message,0)
-        }
-        B.state=0;
-        L--;
-        a--
-      }
-      L++
-    }
-    return L>=J.length
-  };
-  D.f=()=>{
-    if(N){
-      return
-    }
-    let a=C.c;
-    Object.defineProperty(globalThis,"onPlayerJoin",{
-      configurable:!0,
-      set:b=>{
-        if(b instanceof Function){
-          a.onPlayerJoin=b
-        }else{
-          a.onPlayerJoin=_A
-        }
-      },
-      get:()=>a.onPlayerJoin
-    });
-    a.onPlayerJoin=I;
-    J=null;
-    N=!0
-  }
-}
-{
-  let A=_D,
-  B=_I,
-  C=api.getBlock,
-  D=api.getBlockId,
-  E=api.getBlockData,
-  F=api.getStandardChestItems,
-  G,
-  H,
-  I,
-  J,
-  K,
-  L,
-  M,
-  N,
-  O;
-  B.i=()=>{
-    if(B.h){
-      return
-    }
-    B.d=A.BLOCKS instanceof Array?A.BLOCKS:[];
-    let a=A.block_manager;
-    B.f=!!a.is_chest_data;
-    G=a.max_executions_per_tick|0;
-    G=(G&~(G>>31))+(-G>>31)+1;
-    H=a.max_errors_count|0;
-    H=H&~(H>>31);
-    B.c=0;
-    B.e=[null];
-    I=0;
-    J=0;
-    B.g=!1;
-    K=null;
-    L=1;
-    M=0;
-    N=0;
-    O=!1;
-    B.h=!0
-  };
-  B.a=()=>{
-    let a=B.d,
-    b=B.e,
-    c=G,
-    d=a.length,
-    e,f,g,h,i;
-    while(J<d){
-      e=a[J];
-      if(!e||e.length<3){
-        J++;
-        continue
-      }
-      f=e[0];
-      g=e[1];
-      h=e[2];
-      if((e[3]=C(f,g,h))==="Unloaded"){
-        return
-      }
-      i=E(f,g,h)?.persisted?.shared?.text;
-      try{
-        (0,eval)(i)
-      }catch(j){
-        I++;
-        b[I*+(b.length-1<H)]=[j.name,j.message,f,g,h]
-      }
-      J++;
-      c--;
-      if(c<=0){
-        return
-      }
-    }
-    B.c=1
-  };
-  B.b=()=>{
-    let a=B.e;
-    if(!B.g){
-      let b=B.d[0];
-      if(!b||b.length<3){
-        B.c=1;
-        return
-      }
-      if(D(b[0],b[1],b[2])===1){
-        return
-      }
-      K=F(b);
-      if(!K[0]?.attributes?.customAttributes?.region){
-        B.c=1;
-        return
-      }
-      B.g=!0
-    }
-    let c=G,
-    d,e,f,g,h,i,j,k,l,m,n;
-    while(d=K[L]){
-      e=d.attributes.customAttributes._;
-      f=e.length-2;
-      while(M<f){
-        g=e[M];
-        h=e[M+1];
-        i=e[M+2];
-        if(D(g,h,i)===1){
-          return
-        }
-        j=F([g,h,i]);
-        while(N<4){
-          k="";
-          l=N*9;
-          m=0;
-          while(m<9&&(n=j[l+m])){
-            k+=n.attributes.customAttributes._;
-            m++
-          }
-          try{
-            (0,eval)(k)
-          }catch(o){
-            I++;
-            a[I*+(a.length-1<H)]=[o.name,o.message,g,h,i,N]
-          }
-          N++;
-          c--;
-          if(c<=0){
-            return
-          }
-        }
-        N=0;
-        M+=3
-      }
-      M=0;
-      L++
-    }
-    B.c=1
-  };
-  B.j=()=>{
-    if(O){
-      return
-    }
-    B.e[0]=null;
-    K=null;
-    O=!0
-  }
-}
-{
-  let A=_D,
-  B=_F,
-  C=_G,
-  D=_H,
-  E=_I,
-  F=_J,
-  G=_L,
-  H=_B+" EM: ",
-  I=_B+" BM: ",
-  J=_B+" OM: ",
-  K=-1,
-  L,
-  M,
-  N,
-  O,
-  P;
-  F.d=a=>{
-    let b="Code was loaded in "+P*50+" ms",
-    c=E.e.length-1;
-    if(a){
-      b+=c>0?" with "+c+" error"+(c===1?"":"s")+".":" with 0 errors."
-    }else{
-      b+="."
-    }
-    _C(J+b,1+(c<=0))
-  };
-  F.e=a=>{
-    let b=E.e,
-    c=b.length-1;
-    if(c>0){
-      let d="Code execution error"+(c===1?"":"s")+":",
-      e;
-      if(E.f){
-        for(let f=1;f<=c;f++){
-          e=b[f];
-          d+="\n"+e[0]+" at ("+e[2]+", "+e[3]+", "+e[4]+") in partition ("+e[5]+"): "+e[1]
-        }
-      }else{
-        for(let g=1;g<=c;g++){
-          e=b[g];d+="\n"+e[0]+" at ("+e[2]+", "+e[3]+", "+e[4]+"): "+e[1]
-        }
-      }
-      _C(I+d,0)
-    }else if(a){
-      _C(I+"No code execution errors.",2)
-    }
-  };
-  F.f=()=>{
-    let a=E.d,
-    b="",
-    c;
-    if(E.f){
-      if(E.g){
-        c=a[0];
-        b="Executed storage data at ("+c[0]+", "+c[1]+", "+c[2]+")."
-      }else{
-        b="No storage data found."
-      }
-    }else{
-      let d=0,
-      e=a.length;
-      for(let f=0;f<e;f++){
-        c=a[f];
-        if(c[3]){
-          b+='\n"'+c[3]+'" at ('+c[0]+", "+c[1]+", "+c[2]+")";
-          d++
-        }
-      }
-      b="Executed "+d+" block"+(d===1?"":"s")+" data"+(d===0?".":":")+b
-    }
-    _C(I+b,3)
-  };
-  F.g=(a,b,c)=>{
-    if(B.e.length){
-      _C(H+'Unregistered active events: "'+B.e.join('", "')+'".',1)
-    }
-    if(a){
-      F.d(b)
-    }
-    if(b){
-      F.e(!a)
-    }
-    if(c){
-      F.f()
-    }
-  };
-  F.h=()=>{
-    K++;
-    if(F.a<6){
-      if(F.a===-2){
-        if(F.b&&!B.a&&K>20){
-          let a=B.b,
-          b=H+"Error on primary setup - "+a?.[0]+": "+a?.[1]+".",
-          c=api.getPlayerIds(),
-          d=0,
-          e;
-          while(e=c[d]){
-            if(api.checkValid(e)){
-              api.kickPlayer(e,b)
-            }
-            d++
-          }
-        }
-        return
-      }
-      if(F.a===0){
-        K=0;
-        let f=A.boot_manager;
-        L=(f.boot_delay_ms|0)*.02|0;
-        L=L&~(L>>31);
-        M=!!f.show_boot_logs;
-        N=!!f.show_error_logs;
-        O=!!f.show_execution_logs;
-        P=-1;
-        B.f=!1;
-        C.b=!1;
-        D.a=!1;
-        E.h=!1;
-        G.isRunning=F.c=!0;
-        F.a=1
-      }
-      if(F.a===1){
-        if(K<L){
-          return
-        }
-        F.a=2
-      }
-      if(F.a===2){
-        B.i();
-        C.c();
-        if(B.d.onPlayerJoin){
-          D.b()
-        }
-        E.i();
-        F.a=3
-      }
-      if(F.a===3){
-        if(F.b){
-          B.h()
-        }else{
-          B.j()
-        }
-        F.a=4
-      }
-      if(F.a===4){
-        if(B.d.onPlayerJoin){
-          D.d();
-          D.c()
-        }
-        C.d();
-        F.a=5
-      }
-      if(F.a===5){
-        if(E.f){
-          C.a=E.b
-        }else{
-          C.a=E.a
-        }
-        F.a=6;
-        return
-      }
-    }
-    if(F.a===6){
-      if(E.c===1){
-        E.j();
-        E.c=-1;
-        F.a=7+!B.d.onPlayerJoin
-      }
-    }
-    if(F.a===7){
-      if(D.e()){
-        D.f();
-        F.a=8
-      }
-    }
-    if(F.a===8){
-      C.e();
-      G.isPrimaryBoot=F.b=!1;
-      G.isRunning=F.c=!1;
-      F.a=-1;
-      P=K-L+1;
-      F.g(M,N,O)
-    }
-  }
-}
-{
-  let A=_K,
-  B=_B+" SM: ",
-  C=api.setBlock,
-  D=api.getBlockData,
-  E=api.getStandardChestItems,
+  let A=configuration,
+  B={
+    state:0,
+    fn:()=>{},
+    args:[],
+    limit:2,
+    phase:1048576,
+    cache:null,
+    default:1048576,
+    wasInterrupted:!1,
+    tick:null
+  },
+  C={
+    create:null,
+    check:null,
+    build:null,
+    dispose:null
+  },
+  D={
+    SM:null,
+    config:null,
+    isPrimaryBoot:!0,
+    isRunning:!1,
+    pointer:0,
+    reboot:null,
+    bootLogs:null,
+    errorLogs:null,
+    executionLogs:null,
+    completeLogs:null
+  },
+  _A=eval,
+  _B=api.getBlock,
+  E=api.getBlockId,
+  _C=api.setBlock,
+  _D=api.getBlockData,
+  _E=api.getStandardChestItems,
+  _F=api.getStandardChestItemSlot,
   F=api.setStandardChestItemSlot,
-  G=[],
-  H=0,
-  I=1,
-  J="Bedrock",
-  K="Boat",
-  L={customAttributes:{_:null}},
-  M={customAttributes:{_:[]}},
-  N=M.customAttributes._,
-  O=[],
-  P,
+  _G=api.setCallbackValueFallback,
+  _H=api.getPlayerIds,
+  _I=api.broadcastMessage,
+  G=function(){},
+  _J=[],
+  H="Code Loader",
+  _K=Object.create(null),
+  _L=[],
+  I=[],
+  _M=1,
+  _N=1,
+  _O=1,
+  _P=0,
+  J=H+" SM: ",
+  K=[],
+  L=0,
+  M=1,
+  _Q="Bedrock",
+  N="Boat",
+  _R={customAttributes:{_:null}},
+  _S={customAttributes:{_:[]}},
+  O=_S.customAttributes._,
+  P=[],
+  _T,
+  _U,
+  _V,
+  _W,
+  _X,
+  _Y,
+  _Z,
+  _a,
+  _b,
   Q,
   R,
+  _c,
   S,
+  _d,
   T,
   U,
   V,
   W,
-  X,
-  Y;
-  let Z=(a,b,c,d,e,f,g,h,i)=>{
-    let j=P,
-    k=Q,
-    l=R;
-    if(I===1){
-      P=j=c;
-      Q=k=d;
-      R=l=e;
-      S=0;
-      V=1;
-      Y=0;
-      I=2
+  _e=H+" EM: ",
+  X=Object.create(null),
+  Y=Object.create(null),
+  _f=!1,
+  _g=null,
+  Z=[],
+  a=[],
+  _h=0,
+  b,
+  c,
+  d,
+  e,
+  f,
+  _i=H+" JM: ",
+  _j,
+  g,
+  h,
+  i=[],
+  j={},
+  k,
+  _k=H+" BM: ",
+  _l,
+  l,
+  m=[null],
+  n,
+  o,
+  p,
+  _m,
+  q,
+  r,
+  s,
+  _n,
+  t,
+  u,
+  v,
+  _o,
+  _p=H+" OM: ",
+  _=-2,
+  w=!0,
+  x=-1,
+  y=!1,
+  z,
+  _q,
+  _r,
+  _s,
+  _t;
+
+  const $=(A,B)=>{
+    let C=_J[B];
+    C[0].str=A;
+    _I(C)
+  },
+  $A=()=>{
+    let B=A.join_manager,
+    C=A.block_manager,
+    D=A.boot_manager;
+    d=0;
+    e=G;
+    f=G;
+    if(b){
+      _j=!!B.reset_on_reboot;
+      g=B.max_dequeue_per_tick|0;
+      g=(g&~(g>>31))+(-g>>31)+1;
+      h=G;
+      if(!w){
+        i.length=0;
+        if(_j){j={}}
+      }
+      k=0
     }
-    let m=i,
-    n=a.length,
-    o,p,q,r,s,t,u,v,w,
-    x,y,z,_;
-    while(S<n){
-      if(I===2){
-        j++;
-        if(j>f){
-          j=c;
-          l++;
-          if(l>h){
-            l=e;
-            k++
+    l=A.BLOCKS instanceof Array?A.BLOCKS:[];
+    n=!!C.is_chest_mode;
+    o=C.max_executions_per_tick|0;
+    o=(o&~(o>>31))+(-o>>31)+1;
+    p=C.max_errors_count|0;
+    p=p&~(p>>31);
+    m.length=1;
+    m[0]=null;
+    _m=0;
+    q=0;
+    if(n){
+      r=!1;
+      s={};
+      _n=1;
+      t=0;
+      u=0
+    }
+    z=(D.boot_delay_ms|0)*.02|0;
+    z=z&~(z>>31);
+    _q=!!D.show_boot_logs;
+    _r=!!D.show_error_logs;
+    _s=!!D.show_execution_logs;
+    _t=-1
+  },
+  $B=()=>{
+    B.state=0;
+    if(!_P){
+      B.args=_L;
+      B.cache=null;
+      return
+    }
+    _M=0;
+    B.wasInterrupted=!0;
+    while(_O<_N){
+      I=_K[_O];
+      if(I[2]>0){
+        I[2]--;
+        B.phase=I[3];
+        B.cache=I[4];
+        I[0](...I[1])
+      }
+      delete _K[_O++];
+      _P--
+    }
+    B.state=0;
+    B.args=_L;
+    B.cache=null;
+    B.wasInterrupted=!1;
+    _M=1
+  },
+  $C=(A,B)=>{
+    let C=A[0],
+    D=A[1],
+    G=A[2],
+    H=B[0],
+    I=B[1],
+    K=B[2];
+    if(C>H||D>I||G>K){
+      $(J+"Invalid region bounds. lowPos must be <= highPos on all axes.",1);
+      return !0
+    }
+    if(E(C,D,G)===1){return !1}
+    _C(C,D,G,_Q);
+    F([C,D,G],0,N,null,void 0,{
+      customAttributes:{
+        region:[C,D,G,H,I,K]
+      }
+    });
+    $(J+"Registry unit created at ("+C+", "+D+", "+G+").",2);
+    return !0
+  },
+  $D=A=>{
+    if(E(A[0],A[1],A[2])===1){return !1}
+    let B=_F(A,0)?.attributes?.customAttributes?.region;
+    if(!B){
+      $(J+"No valid registry unit found.",1)
+    }else{
+      $(J+"Storage covers region from ("+B[0]+", "+B[1]+", "+B[2]+") to ("+B[3]+", "+B[4]+", "+B[5]+").",3)
+    }
+    return !0
+  },
+  $E=(A,B,C)=>{
+    if(M===1){
+      if(E(A[0],A[1],A[2])===1){return !1}
+      let D=_F(A,0)?.attributes?.customAttributes?.region;
+      if(!D){
+        $(J+"No valid registry unit found.",1);
+        return !0
+      }
+      _T=D[0];
+      _U=D[1];
+      _V=D[2];
+      _W=D[3];
+      _X=D[4];
+      _Y=D[5];
+      let G=(_W-_T+1)*(_X-_U+1)*(_Y-_V+1)-1,
+      H=B.length+3>>2;
+      if(G<H){
+        $(J+"Not enough space. Need "+H+" storage units, but region holds "+G+".",0);
+        return !0
+      }
+      _Z=_T;
+      _a=_U;
+      _b=_V;
+      Q={};
+      S=0;
+      T=1;
+      W=0;
+      M=2
+    }
+    let I=_Z,
+    K=_a,
+    L=_b,
+    R=C,
+    U=B.length,
+    V,X,Y,Z,a,b,c,d,e,
+    f,g,h,i,j,k,l,m;
+    while(S<U){
+      if(M===2){
+        I++;
+        if(I>_W){
+          I=_T;
+          L++;
+          if(L>_Y){
+            L=_V;
+            K++;
+            if(K>_X){
+              $(J+"Region overflow on storage build at ("+A[0]+", "+A[1]+", "+A[2]+").",0);
+              return !0
+            }
           }
         }
-        C(j,k,l,J);
-        P=j;
-        Q=k;
-        R=l;
-        T=0;
-        U=[j,k,l];
-        I=3
+        j=(I>>5)+"|"+(K>>5)+"|"+(L>>5);
+        if(!Q[j]){
+          if(E(I,K,L)===1){return !1}
+          Q[j]=!0
+        }
+        _C(I,K,L,_Q);
+        _Z=I;
+        _a=K;
+        _b=L;
+        _c=[I,K,L];
+        _d=0;
+        M=3
       }
-      while(T<4&&S<n){
-        if(I===3){
-          x=a[S];
-          o=D(x[0],x[1],x[2])?.persisted?.shared?.text;
-          if(o?.length>0){
-            z=0;
-            p=0;
-            q=0;
-            r=JSON.stringify(o);
-            s=1;
-            t=r.length-1;
-            while(s<t){
-              u=s+1950;
-              if(u>t){
-                u=t
-              }
-              u-=r[u-1]==="\\";
-              while(s<u){
-                v=r.indexOf("\\",s);
-                if(v===-1||v>=u){
-                  w=u-s;
-                  s+=w;
-                  q+=w;
+      while(_d<4&&S<U){
+        if(M===3){
+          f=B[S];
+          g=f[0];
+          h=f[1];
+          i=f[2];
+          j=(g>>5)+"|"+(h>>5)+"|"+(i>>5);
+          if(!Q[j]){
+            if(E(g,h,i)===1){return !1}
+            Q[j]=!0
+          }
+          V=_D(g,h,i)?.persisted?.shared?.text;
+          if(V?.length>0){
+            l=0;
+            X=0;
+            Y=0;
+            Z=JSON.stringify(V);
+            a=1;
+            b=Z.length-1;
+            while(a<b){
+              c=a+1950;
+              if(c>b){c=b}
+              c-=Z[c-1]==="\\";
+              while(a<c){
+                d=Z.indexOf("\\",a);
+                if(d===-1||d>=c){
+                  e=c-a;
+                  a+=e;
+                  Y+=e;
                   break
                 }
-                if(v>s){
-                  w=v-s;
-                  s+=w;
-                  q+=w
+                if(d>a){
+                  e=d-a;
+                  a+=e;
+                  Y+=e
                 }
-                s+=2;
-                q+=1
+                a+=2;
+                Y+=1
               }
-              O[z++]=o.slice(p,q);
-              p=q
+              P[l++]=V.slice(X,Y);
+              X=Y
             }
-            O.length=z;
-            I=4
+            P.length=l;
+            M=4
           }
         }
-        if(I===4){
-          y=T*9;
-          z=0;
-          _=O.length;
-          while(z<_){
-            L.customAttributes._=O[z];
-            F(U,y+z,K,null,void 0,L);
-            z++
+        if(M===4){
+          k=_d*9;
+          l=0;
+          m=P.length;
+          while(l<m){
+            _R.customAttributes._=P[l];
+            F(_c,k+l,N,null,void 0,_R);
+            l++
           }
-          T++;
-          I=3
+          _d++;
+          M=3
         }
         S++
       }
-      if(Y>=243){
-        F(b,V,K,null,void 0,M);
-        V++;
-        N.length=0;
-        Y=0
+      if(W>=243){
+        F(A,T,N,null,void 0,_S);
+        O.length=0;
+        W=0;
+        T++
       }
-      N[Y++]=j;
-      N[Y++]=k;
-      N[Y++]=l;
-      I=2;
-      m--;
-      if(m<=0){
-        return !1
-      }
+      O[W++]=I;
+      O[W++]=K;
+      O[W++]=L;
+      M=2;
+      R--;
+      if(R<=0){return !1}
     }
-    F(b,V,K,null,void 0,M);
-    L.customAttributes._=null;
-    N.length=0;
+    F(A,T,N,null,void 0,_S);
+    _R.customAttributes._=null;
     O.length=0;
-    U=null;
-    _C(B+"Built storage at ("+b[0]+", "+b[1]+", "+b[2]+").",2);
-    I=1;
+    P.length=0;
+    Q=null;
+    _c=null;
+    $(J+"Built storage at ("+A[0]+", "+A[1]+", "+A[2]+").",2);
+    M=1;
     return !0
-  };
-  let $=(a,b,c)=>{
-    if(I===1){
-      V=1;
-      X=0;
-      I=2
-    }
-    let d=c,
-    e;
-    while(e=b[V]){
-      if(I===2){
-        W=e.attributes.customAttributes._;
-        X=0;
-        Y=W.length;
-        I=3
+  },
+  $F=(A,B)=>{
+    if(M===1){
+      if(E(A[0],A[1],A[2])===1){return !1}
+      R=_E(A);
+      if(!R[0]?.attributes?.customAttributes?.region){
+        $(J+"No valid registry unit found.",1);
+        R=null;
+        return !0
       }
-      if(I===3){
-        while(X<Y){
-          C(W[X],W[X+1],W[X+2],"Air");
-          X+=3;
-          d--;
-          if(d<=0){
-            return !1
+      Q={};
+      T=1;
+      V=0;
+      M=2
+    }
+    let C=B,
+    D,G,H,I,K;
+    while(D=R[T]){
+      if(M===2){
+        U=D.attributes.customAttributes._;
+        V=0;
+        W=U.length;
+        M=3
+      }
+      if(M===3){
+        while(V<W){
+          G=U[V];
+          H=U[V+1];
+          I=U[V+2];
+          K=(G>>5)+"|"+(H>>5)+"|"+(I>>5);
+          if(!Q[K]){
+            if(E(G,H,I)===1){return !1}
+            Q[K]=!0
+          }
+          _C(G,H,I,"Air");
+          V+=3;
+          C--;
+          if(C<=0){return !1}
+        }
+        F(A,T,"Air");
+        T++;
+        M=2
+      }
+    }
+    $(J+"Disposed storage at ("+A[0]+", "+A[1]+", "+A[2]+").",2);
+    Q=null;
+    R=null;
+    U=null;
+    M=1;
+    return !0
+  },
+  $G=()=>{
+    let A=K.length,
+    B=L<A;
+    while(B){
+      try{
+        if(!K[L]()){break}
+      }catch(C){
+        $(J+"Task error on tick - "+C.name+": "+C.message,0)
+      }
+      B=++L<A
+    }
+    if(!B){
+      L=0;
+      K.length=0
+    }
+  },
+  $H=()=>{
+    if(_f){return}
+    let C=B,
+    D=A.EVENT_REGISTRY,
+    E=A.ACTIVE_EVENTS,
+    F=A.event_manager,
+    H=!!F.is_framework_enabled,
+    I=F.default_retry_limit|0;
+    I=(I&~(I>>31))+(-I>>31)+1;
+    let J=0,
+    K=E.length;
+    while(J<K){
+      let L=E[J];
+      if(L==="tick"){
+        J++;
+        continue
+      }
+      let M=D[L];
+      if(M===void 0){
+        Z[Z.length]=L;
+        J++;
+        continue
+      }
+      if(!(M instanceof Array)){
+        M=D[L]=[]
+      }
+      let N=!!M[1];
+      if(L!=="onPlayerJoin"){
+        a[a.length]=L;
+        let O=G;
+        X[L]=P=>{O=P instanceof Function?P:G};
+        Y[L]=()=>O;
+        if(H&&N){
+          let Q=M[2];
+          if(Q==null){Q=I}
+          Q|=0;
+          globalThis[L]=function(R,S,T,U,V,W,c,d,e){
+            C.state=1;
+            C.fn=O;
+            C.args=[R,S,T,U,V,W,c,d,e];
+            C.limit=Q;
+            C.phase=1048576;
+            try{
+              return O(R,S,T,U,V,W,c,d,e)
+            }finally{
+              C.state=0
+            }
+          }
+        }else{
+          globalThis[L]=function(R,S,T,U,V,W,c,d,e){
+            return O(R,S,T,U,V,W,c,d,e)
           }
         }
-        F(a,V,"Air");
-        V++;
-        I=2
+      }else{
+        b=$N;
+        X.onPlayerJoin=f=>{b=f instanceof Function?f:G};
+        Y.onPlayerJoin=()=>b;
+        if(H&&N){
+          let g=M[2];
+          if(g==null){g=I}
+          g|=0;
+          globalThis.onPlayerJoin=function(h,i){
+            C.state=1;
+            C.fn=b;
+            C.args=[h,i];
+            C.limit=g;
+            C.phase=1048576;
+            try{
+              return b(h,i)
+            }finally{
+              C.state=0
+            }
+          }
+        }else{
+          globalThis[L]=function(h,i){
+            return b(h,i)
+          }
+        }
       }
+      J++
     }
-    _C(B+"Disposed storage at ("+a[0]+", "+a[1]+", "+a[2]+").",2);
-    I=1;
-    return !0
-  };
-  A.create=(a,b)=>{
-    let c=a[0],
-    d=a[1],
-    e=a[2],
-    f=b[0],
-    g=b[1],
-    h=b[2];
-    if(c>f||d>g||e>h){
-      _C(B+"Invalid region bounds. lowPos must be <= highPos on all axes.",1);
-      return
+  },
+  $I=()=>{
+    let B=A.EVENT_REGISTRY,
+    C=a.length;
+    while(_h<C){
+      let D=a[_h];
+      _G(D,B[D][0]);
+      Object.defineProperty(globalThis,D,{
+        configurable:!0,
+        set:X[D],
+        get:Y[D]
+      });
+      _h++
     }
-    C(c,d,e,J);
-    F(a,0,K,null,void 0,{
-      customAttributes:{
-        region:[c,d,e,f,g,h]
-      }
+    if(b){
+      Object.defineProperty(globalThis,"onPlayerJoin",{
+        configurable:!0,
+        set:E=>{b=E instanceof Function?E:G},
+        get:()=>b
+      })
+    }
+    Object.defineProperty(globalThis,"tick",{
+      configurable:!0,
+      set:F=>{c=F instanceof Function?F:G},
+      get:()=>c
+    })
+  },
+  $J=()=>{
+    let A=a.length;
+    while(d<A){
+      X[a[d]](G);
+      d++
+    }
+    if(b){b=G}
+  },
+  $K=()=>{
+    $B();
+    f(50);
+    e()
+  },
+  $L=()=>{
+    let A=G;
+    Object.defineProperty(globalThis,"tick",{
+      configurable:!0,
+      set:B=>{f=A=B instanceof Function?B:G},
+      get:()=>A
     });
-    _C(B+"Registry unit created at ("+c+", "+d+", "+e+").",2)
-  };
-  A.check=a=>{
-    let b=E(a),
-    c=b[0]?.attributes?.customAttributes?.region;
-    if(!c){
-      _C(B+"No valid registry unit found.",1)
-    }else{
-      _C(B+"Storage covers region from ("+c[0]+", "+c[1]+", "+c[2]+") to ("+c[3]+", "+c[4]+", "+c[5]+").",3)
+    e=c;
+    c=$K
+  },
+  $M=()=>{
+    Object.defineProperty(globalThis,"tick",{
+      configurable:!0,
+      set:A=>{c=A instanceof Function?A:G},
+      get:()=>c
+    });
+    c=f;
+    e=G
+  },
+  $N=(A,B)=>{
+    let C=i.length;
+    i[C]=A;
+    i[C+1]=B;
+    j[A]=1
+  },
+  $O=()=>{
+    b=$N;
+    let A=G;
+    Object.defineProperty(globalThis,"onPlayerJoin",{
+      configurable:!0,
+      set:B=>{h=A=B instanceof Function?B:G},
+      get:()=>A
+    })
+  },
+  $P=()=>{
+    if(_j||w){
+      let A=_H(),
+      B=0,
+      C,D;
+      while(C=A[B]){
+        if(!j[C]){
+          D=i.length;
+          i[D]=C;
+          i[D+1]=!1;
+          j[C]=1
+        }
+        B++
+      }
     }
-  };
-  A.build=(a,b,c=16)=>{
-    let d=E(a),
-    e=d[0]?.attributes?.customAttributes?.region;
-    if(!e){
-      _C(B+"No valid registry unit found.",1);
-      return
-    }
-    let f=e[0],
-    g=e[1],
-    h=e[2],
-    i=e[3],
-    j=e[4],
-    k=e[5],
-    l=(i-f+1)*(j-g+1)*(k-h+1),
-    m=b.length+7>>2;
-    if(l<m){
-      _C(B+"Not enough space. Need "+m+" storage units, but region holds "+l+".",0)
-    }else{
-      G[G.length]=()=>Z(b,a,f,g,h,i,j,k,c)
-    }
-  };
-  A.dispose=(a,b=32)=>{
-    let c=E(a);
-    if(!c[0]?.attributes?.customAttributes?.region){
-      _C(B+"No valid registry unit found.",1)
-    }else{
-      G[G.length]=()=>$(a,c,b)
-    }
-  };
-  A.tick=()=>{
-    let a=G.length;
-    if(a){
-      let b=H<a;
-      while(b){
+  },
+  $Q=()=>{
+    let A=g,
+    C,D;
+    while(k<i.length&&A>0){
+      C=i[k];
+      if(j[C]!==2){
+        D=i[k+1];
+        j[C]=2;
+        k+=2;
+        B.state=1;
+        B.fn=h;
+        B.args=[C,D];
+        B.limit=2;
+        B.phase=1048576;
         try{
-          if(!G[H]()){
+          h(C,D)
+        }catch(error){
+          B.state=0;
+          $(_i+error.name+": "+error.message,0)
+        }
+        B.state=0;
+        k-=2;
+        A--
+      }
+      k+=2
+    }
+    return k>=i.length
+  },
+  $R=()=>{
+    b=h;
+    Object.defineProperty(globalThis,"onPlayerJoin",{
+      configurable:!0,
+      set:A=>{b=A instanceof Function?A:G},
+      get:()=>b
+    });
+    i.length=0
+  },
+  $S=()=>{
+    let A=o,
+    B=l.length,
+    C,E,F,G,H;
+    while(q<B){
+      C=l[q];
+      if(!C||C.length<3){
+        D.pointer=++q;
+        continue
+      }
+      E=C[0];
+      F=C[1];
+      G=C[2];
+      if((C[3]=_B(E,F,G))==="Unloaded"){return !1}
+      try{
+        H=_D(E,F,G)?.persisted?.shared?.text;
+        _A(H)
+      }catch(I){
+        m[++_m*+(m.length-1<p)]=[I.name,I.message,E,F,G]
+      }
+      D.pointer=++q;
+      A--;
+      if(A<=0){return !1}
+    }
+    return !0
+  },
+  $T=()=>{
+    if(!r){
+      let A=l[0];
+      if(!A||A.length<3){return !0}
+      if(E(A[0],A[1],A[2])===1){return !1}
+      v=_E(A);
+      if(!v[0]?.attributes?.customAttributes?.region){return !0}
+      r=!0
+    }
+    let B=o,
+    C,F,G,H,I,J,K,L,M,N,O;
+    while(C=v[_n]){
+      F=C.attributes.customAttributes._;
+      G=F.length-2;
+      while(t<G){
+        H=F[t];
+        I=F[t+1];
+        J=F[t+2];
+        K=(H>>5)+"|"+(I>>5)+"|"+(J>>5);
+        if(!s[K]){
+          if(E(H,I,J)===1){return !1}
+          s[K]=!0
+        }
+        if(u===0){
+          _o=_E([H,I,J])
+        }
+        while(u<4){
+          L="";M=u*9;
+          N=0;
+          while(N<9&&(O=_o[M+N])){
+            L+=O.attributes.customAttributes._;
+            N++
+          }
+          if(N===0){
+            D.pointer++;
             break
           }
-        }catch(c){
-          _C(B+"Task error on tick - "+c.name+": "+c.message,0)
+          try{
+            _A(L)
+          }catch(P){
+            m[++_m*+(m.length-1<p)]=[P.name,P.message,H,I,J,u]
+          }
+          u++;
+          D.pointer++;
+          B--;
+          if(B<=0){return !1}
         }
-        b=++H<a
+        u=0;
+        t+=3
       }
-      if(!b){
-        H=0;
-        G.length=0
-      }
+      t=0;
+      _n++
     }
-  }
-}
-{
-  let A=_F,
-  B=_J,
-  C=_L,
-  D=_B+" OM: ";
-  C.SM=_K;
-  C.config=_D;
-  C.reboot=()=>{
-    if(!B.c){
-      A.c.tick=B.h;
-      B.a=0
+    return !0
+  },
+  $U=()=>{
+    _l=n?$T:$S
+  },
+  $V=()=>{
+    m[0]=null;
+    s=null;
+    v=null;
+    _o=null
+  },
+  $W=A=>{
+    let B="Code was loaded in "+_t*50+" ms",
+    C=m.length-1;
+    if(A){
+      B+=C>0?" with "+C+" error"+(C===1?"":"s")+".":" with 0 errors."
     }else{
-      _C(D+"Reboot request was denied.",1)
+      B+="."
+    }
+    $(_p+B,1+(C<=0))
+  },
+  $X=A=>{
+    let B=m.length-1;
+    if(B>0){
+      let C="Code execution error"+(B===1?"":"s")+":",
+      D;
+      if(n){
+        for(let E=1;E<=B;E++){
+          D=m[E];
+          C+="\n"+D[0]+" at ("+D[2]+", "+D[3]+", "+D[4]+") in partition ("+D[5]+"): "+D[1]
+        }
+      }else{
+        for(let F=1;F<=B;F++){
+          D=m[F];C+="\n"+D[0]+" at ("+D[2]+", "+D[3]+", "+D[4]+"): "+D[1]
+        }
+      }
+      $(_k+C,0)
+    }else if(A){
+      $(_k+"No code execution errors.",2)
+    }
+  },
+  $Y=()=>{
+    let A="",
+    B;
+    if(n){
+      if(r){
+        B=l[0];
+        A="Executed storage data at ("+B[0]+", "+B[1]+", "+B[2]+")."
+      }else{
+        A="No storage data found."
+      }
+    }else{
+      let C=0,
+      D=l.length;
+      for(let E=0;E<D;E++){
+        B=l[E];
+        if(B[3]){
+          A+='\n"'+B[3]+'" at ('+B[0]+", "+B[1]+", "+B[2]+")";
+          C++
+        }
+      }
+      A="Executed "+C+" block"+(C===1?"":"s")+" data"+(C===0?".":":")+A
+    }
+    $(_k+A,3)
+  },
+  $Z=(A,B,C)=>{
+    if(Z.length){
+      $(_e+'Unknown active events: "'+Z.join('", "')+'".',1)
+    }
+    if(A){
+      $W(B)
+    }
+    if(B){
+      $X(!A)
+    }
+    if(C){
+      $Y()
+    }
+  },
+  $a=()=>{
+    x++;
+    if(_<3){
+      if(_===-2){
+        if(!_f&&x>20){
+          let A=_e+"Error on primary setup - "+_g?.[0]+": "+_g?.[1]+".",
+          B=_H(),
+          C=0,
+          E;
+          while(E=B[C]){
+            if(api.checkValid(E)){
+              api.kickPlayer(E,A)
+            }
+            C++
+          }
+        }
+        return
+      }
+      if(_===0){
+        $A();
+        _=1
+      }
+      if(_===1){
+        if(x<z){return}
+        _=2
+      }
+      if(_===2){
+        if(w){
+          $I()
+        }else{
+          $J()
+        }
+        if(b){
+          $O();
+          $P()
+        }
+        $U();
+        $L();
+        _=3
+      }
+    }
+    if(_===3&&_l()){
+      $V();
+      _=4+!b
+    }
+    if(_===4&&$Q()){
+      $R();
+      _=5
+    }
+    if(_===5){
+      $M();
+      D.isPrimaryBoot=w=!1;
+      D.isRunning=y=!1;
+      _=-1;
+      _t=x-z+1;
+      $Z(_q,_r,_s)
     }
   };
-  C.bootLogs=(a=!0)=>{
-    B.d(a)
-  };
-  C.errorLogs=(a=!0)=>{
-    B.e(a)
-  };
-  C.executionLogs=()=>{
-    B.f()
-  };
-  C.completeLogs=(a=!0,b=!0,c=!1)=>{
-    B.g(a,b,c)
-  }
-}
-try{
-  let A=_K,
-  B=_F.c;
-  B.tick=_J.h;
-  globalThis.tick=function(){
-    B.tick(50);
-    A.tick()
-  };
-  _F.g();
-  let C=_D.STYLES,
-  D=_C.STYLES=[];
-  for(let E=0;E<4;E++){
-    D[E]=[{
-      str:"",
-      style:{
-        color:C[E*3],
-        fontWeight:C[E*3+1],
-        fontSize:C[E*3+2]
+  B.tick = $B;
+  Object.defineProperty(globalThis.InternalError.prototype,"name",{
+    configurable:!0,
+    get:()=>{
+      if(_M){
+        if(B.state){
+          _K[_N++]=[B.fn,B.args,B.limit,B.phase,B.cache];
+          _P++
+        }
+      }else{
+        I[3]=B.phase;
+        B.wasInterrupted=!1;
+        _M=1
       }
-    }]
+      B.state=0;
+      return"InternalError"
+    }
+  });
+  C.create=(A,B)=>{
+    K[K.length]=()=>$C(A,B)
+  };
+  C.check=A=>{
+    K[K.length]=()=>$D(A)
+  };
+  C.build=(A,B,C=8)=>{
+    K[K.length]=()=>$E(A,B,C)
+  };
+  C.dispose=(A,B=32)=>{
+    K[K.length]=()=>$F(A,B)
+  };
+  D.SM=C;
+  D.config=A;
+  D.reboot=()=>{
+    if(!y){
+      x=0;
+      D.isRunning=y=!0;
+      D.pointer=0;
+      c=$a;
+      _=0
+    }else{
+      $(_p+"Reboot request was denied.",1)
+    }
+  };
+  D.bootLogs=(A=!0)=>{
+    $W(A)
+  };
+  D.errorLogs=(A=!0)=>{
+    $X(A)
+  };
+  D.executionLogs=()=>{
+    $Y()
+  };
+  D.completeLogs=(A=!0,B=!0,C=!1)=>{
+    $Z(A,B,C)
+  };
+  c=$a;
+  X.tick=A=>{c=A instanceof Function?A:G};
+  Y.tick=()=>c;
+  globalThis.tick=function(){
+    c(50);
+    if(K.length){$G()}
+  };
+  try{
+    x=0;
+    D.isRunning=y=!0;
+    D.pointer=0;
+    $H();
+    let E=A.STYLES;
+    for(let F=0;F<4;F++){
+      _J[F]=[{
+        str:"",
+        style:{
+          color:E[F*3],
+          fontWeight:E[F*3+1],
+          fontSize:E[F*3+2]
+        }
+      }]
+    }
+    let G=Object.seal,
+    H=Object.freeze;
+    G(A);
+    G(A.boot_manager);
+    G(A.block_manager);
+    G(A.join_manager);
+    G(A.event_manager);
+    H(A.EVENT_REGISTRY);
+    H(A.STYLES);
+    G(B);
+    H(C);
+    G(D);
+    _f=!0;
+    _=0
+  }catch(I){
+    _g=[I.name,I.message]
   }
-  let F=Object.seal,
-  G=Object.freeze;
-  F(_D);
-  F(_D.boot_manager);
-  F(_D.block_manager);
-  F(_D.join_manager);
-  F(_D.event_manager);
-  G(_D.EVENT_REGISTRY);
-  G(_D.STYLES);
-  F(_E);
-  G(_K);
-  F(_L);
-  _F.a=!0;
-  _J.a=0
-}catch(H){
-  _F.b=[H.name,H.message]
+  globalThis.IF=B;
+  globalThis.CL=D;
+  void 0
 }
-globalThis.IF=_E;
-globalThis.CL=_L;
-void 0;
 
+/*
+_CF
+_IF
+_SM
+_CL
+_getBlockId
+_setStandardChestItemSlot
+_NOOP
+_PREFIX
+_IF_element
+_SM_prefix
+_SM_taskQueue
+_SM_taskIndex
+_SM_taskPhase
+_SM_itemType
+_SM_storageCoordsBuffer
+_SM_dataChunksBuffer
+_SM_isChunkLoaded
+_SM_registryItems
+_SM_blockIndex
+_SM_registrySlotIndex
+_SM_coordsList
+_SM_coordsIndex
+_SM_coordsCount
+_EM_setEventHandler
+_EM_getEventHandler
+_EM_unknownActiveEvents
+_EM_activeEvents
+_EM_join_handler
+_EM_tick_handler
+_EM_resetCursor
+_TM_boot
+_TM_main
+_JM_maxDequeuePerTick
+_JM_main
+_JM_buffer
+_JM_state
+_JM_dequeueCursor
+_BM_blocks
+_BM_errors
+_BM_isChestMode
+_BM_maxExecutionsPerTick
+_BM_maxErrorsCount
+_BM_blockIndex
+_BM_isRegistryLoaded
+_BM_isChunkLoaded
+_BM_coordsIndex
+_BM_partition
+_BM_registryItems
+_OM_phase
+_OM_isPrimaryBoot
+_OM_tickNum
+_OM_isRunning
+_OM_bootDelayTicks
+_log
+*/
+
+// 26/01/2026

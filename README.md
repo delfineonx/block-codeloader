@@ -197,7 +197,7 @@ SM
 
 /*
  * Accessor of `configuration` object (sealed).
- * You may mutate existing keys (then call `CL.reboot()`),
+ * You may mutate existing vaues by keys (then call `CL.reboot()`),
  * but you cannot add or delete properties.
  */
 config
@@ -210,13 +210,22 @@ config
 isPrimaryBoot
 
 /*
- * `true` while the boot session is currently running.
+ * `true` while any boot session is currently running.
  * `false` after the boot is finished.
  *
  * It can be useful to resolve conflicts,
  * when actions in callbacks depend on not initialized states during boot.
  */
 isRunning
+
+/*
+ * Progress pointer of the current/last boot session.
+ * Updated while boot is running to indicate how far execution has advanced.
+ *
+ * - Block mode: current index in `CL.config.BLOCKS`.
+ * - Chest mode: current index in `blocks` passed to `CL.SM.build(..., blocks, ...)`.
+ */
+pointer
 
 /**
  * Start a new boot session using the current (last) config.
@@ -270,6 +279,7 @@ completeLogs(showBootLogs, showErrorLogs, showExecutionLogs)
 ```js
 /**
  * Create a registry unit (chest-like container) and store region bounds in slot 0.
+ * Task is queued to tick.
  *
  * @param {[number, number, number]} lowPosition - bottom left corner [x,y,z]
  * @param {[number, number, number]} highPosition - top right corner [x,y,z]
@@ -279,6 +289,7 @@ create(lowPosition, highPosition)
 
 /**
  * Broadcast info from an existing registry unit.
+ * Task is queued to tick.
  *
  * @param {[number, number, number]} registryPosition
  * @returns {void}
@@ -305,14 +316,6 @@ build(registryPosition, blocks, maxStorageUnitsPerTick)
  * @returns {void}
  */
 dispose(registryPosition, maxStorageUnitsPerTick)
-
-/**
- * Internal task processor.
- * Called automatically by the loader each tick.
- *
- * @returns {void}
- */
-tick()
 ```
 
 </details>
@@ -375,21 +378,11 @@ const configuration = {
     </p>
   </blockquote>
 
-  <div align="left">
-    <h4>⊂ <code><b>Event Wiring</b></code> ⊃</h4>
-  </div>
-
-  <ul>
-    <li>the loader creates <code>globalThis.eventName(...args)</code> wrappers</li>
-    <li>your handler is stored as a delegator: <code>EventManager.delegator[eventName]</code></li>
-    <li>the wrapper returns whatever your delegator returns</li>
-  </ul>
-
   <blockquote>
     <p>
       <h4><code><b>! NOTE</b></code></h4>
       <ul>
-        <li>Event wrapper installation is created on world code init based on the initial list (i.e. can be changed only in real <code>World Code</code>).</li>
+        <li>Event wrappers are created on world code init based on the initial list (i.e. can be changed only in real <code>World Code</code>).</li>
       </ul>
     </p>
   </blockquote>
@@ -417,14 +410,14 @@ const configuration = {
     <li>
       <code><b>block data</b></code>
       <ul>
-        <li><code>block_manager.is_chest_data = false</code></li>
+        <li><code>block_manager.is_chest_mode = false</code></li>
         <li>execution order = order of entries in <code>BLOCKS</code></li>
       </ul>
     </li>
     <li>
       <code><b>chest data</b></code>
       <ul>
-        <li><code>block_manager.is_chest_data = true</code></li>
+        <li><code>block_manager.is_chest_mode = true</code></li>
         <li><code>BLOCKS</code> should contain only one entry: <code>[registryX, registryY, registryZ]</code></li>
         <li>execution order = storage order inside the registry (see <a href="#storage-format">Storage Format</a>)</li>
       </ul>
@@ -516,7 +509,7 @@ const configuration = {
     </thead>
     <tbody>
       <tr>
-        <td><code>is_chest_data</code></td>
+        <td><code>is_chest_mode</code></td>
         <td align="right">Boolean</td>
         <td align="right"><code>false</code></td>
         <td>Whether to read and execute from chest storage (registry) instead of block data.</td>
@@ -671,7 +664,7 @@ STYLES: [
 // 1) Create a registry (defines region where storage units can be placed)
 CL.SM.create([lowX, lowY, lowZ], [highX, highY, highZ]);
 
-// 2) Remove previously built storage units (optional, recommended to prevent mixed/duplicated data)
+// 2) Remove previously built storage units (optional, recommended to prevent mixed data)
 CL.SM.dispose([registryX, registryY, registryZ]);
 
 // 3) Build storage from your block positions list
@@ -694,14 +687,14 @@ const configuration = {
   ],
   // ...
   block_manager: {
-    is_chest_data: true,
+    is_chest_mode: true,
     // ...
   },
   // ...
 };
 
 // Or at runtime
-CL.config.block_manager.is_chest_data = true;
+CL.config.block_manager.is_chest_mode = true;
 CL.config.BLOCKS = [[registryX, registryY, registryZ]];
 CL.reboot();
 ```
@@ -712,11 +705,11 @@ CL.reboot();
 
   <p>
     One storage unit stores up to 4 blocks (4 partitions).<br>
-    Therefore, required storage units: <code>Math.floor((blocks.length + 7) / 4)</code>.
+    Therefore, required storage units: <code>Math.floor((blocks.length + 3) / 4)</code>.
   </p>
 
   <p>
-    Region capacity is the number of blocks inside the axis-aligned box: <code>(dx + 1) * (dy + 1) * (dz + 1)</code>.<br>
+    Region capacity is the number of blocks inside the axis-aligned box: <code>(dx + 1) * (dy + 1) * (dz + 1) - 1</code>.<br>
     If capacity is smaller than required units, build will refuse.
   </p>
 
@@ -778,7 +771,7 @@ CL.reboot();
   </div>
 
   <ul>
-    <li>Position: <code>BLOCKS[0]</code> when <code>is_chest_data = true</code></li>
+    <li>Position: <code>BLOCKS[0]</code> when <code>is_chest_mode = true</code></li>
     <li>Slot 0 must contain <code>item.attributes.customAttributes.region = [lowX,lowY,lowZ,highX,highY,highZ]</code></li>
     <li>Slots 1..35 store coordinate lists of storage units in <code>item.attributes.customAttributes._</code></li>
     <li>Each coordinate list is a flat array: <code>[x0,y0,z0, x1,y1,z1, ...]</code></li>
@@ -893,8 +886,8 @@ if (myId === null) {
 
   <p>
     <code>16000</code> chars — real <code>World Code</code> capacity.<br>
-    <code>13230</code> chars — default loader minified source.<br>
-    <code>15450</code> chars — configuration fully populated
+    <code>13440</code> chars — default loader minified source.<br>
+    <code>15660</code> chars — configuration fully populated
     (<code>ACTIVE_EVENTS</code> maxed out, all entries in <code>EVENT_REGISTRY</code> fully defined).
   </p>
 
@@ -908,8 +901,8 @@ if (myId === null) {
   </ul>
 
   <p>
-    This leaves ~<code>550</code> free characters, enough for approximately
-    <code>20–45+</code> block positions directly inside real <code>World Code</code>.
+    This leaves ~<code>340</code> free characters, enough for approximately
+    <code>12–28+</code> block positions directly inside real <code>World Code</code>.
   </p>
 
   <div align="left">
@@ -1048,7 +1041,7 @@ eventName = (...args) => {
 
   <ul>
     <li>
-      <code>"Unregistered active events: ..."</code><br>
+      <code>"Unknown active events: ..."</code><br>
       The event exists in <code>ACTIVE_EVENTS</code> but is missing from <code>EVENT_REGISTRY</code>.
       Fix the name or add an entry to the registry.
     </li>
