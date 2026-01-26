@@ -302,7 +302,7 @@ check(registryPosition)
  *
  * @param {[number, number, number]} registryPosition
  * @param {Array<[number, number, number]>} blocks
- * @param {number} [maxStorageUnitsPerTick = 16]
+ * @param {number} [maxStorageUnitsPerTick = 8]
  * @returns {void}
  */
 build(registryPosition, blocks, maxStorageUnitsPerTick)
@@ -718,21 +718,10 @@ CL.reboot();
   </div>
 
   <ul>
-    <li>Use smaller <code>maxStorageUnitsPerTick</code> if you get many interruptions:<code>CL.SM.build(regPos, blocks, 4)</code></li>
+    <li>Use smaller <code>maxStorageUnitsPerTick</code> if you get many interruptions: <code>CL.SM.build(regPos, blocks, 4)</code></li>
     <li>Use larger values if you want faster conversion and your world runtime can handle it.</li>
-    <li>Storage tasks require the relevant chunks to be loaded. If a chunk is unloaded, the task pauses and resumes later.</li>
+    <li>Storage management tasks load relevant chunks automatically.</li>
   </ul>
-
-  <blockquote>
-    <p>
-      <h4><code><b>! IMPORTANT</b></code></h4>
-      <ul>
-        <li>Use smaller <code>maxStorageUnitsPerTick</code> if you get many interruptions:<code>CL.SM.build(regPos, blocks, 4)</code>.</li>
-        <li>Use larger values if you want faster conversion and your world runtime can handle it.</li>
-        <li>Storage tasks require the relevant chunks to be loaded. If a chunk is unloaded, the task will throw an error.</li>
-      </ul>
-    </p>
-  </blockquote>
 
   <blockquote>
     <p>
