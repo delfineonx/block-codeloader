@@ -37,7 +37,7 @@
   </p>
 
   <h3>
-    <a href="https://github.com/delfineonx/block-code-loader/blob/main/src/code_loader_minified.js">
+    <a href="https://github.com/delfineonx/code-loader/blob/main/src/code_loader_minified.js">
       <code><b>minified version</b></code>
     </a>
   </h3>
@@ -77,16 +77,16 @@
 const configuration = {
   ACTIVE_EVENTS: [
     "tick",
-    "onPlayerJoin",
+    "playerCommand",
     "onPlayerChat",
-    "onPlayerJump",
+    "onPlayerClick",
     // ...
   ],
   BLOCKS: [
-    [2, 2, 2],
-    [4, 2, 2],
-    [6, 2, 2],
-    [8, 2, 2],
+    // ...
+    [27, 4, 14],
+    [27, 4, 12],
+    [27, 4, 10],
     // ...
   ],
   // other fields remain unchanged
@@ -126,10 +126,11 @@ const configuration = {
 
 ```js
 // ---------- EXAMPLE ----------
-tick = () => { }; // (2, 2, 2)
-onPlayerJump = (playerId) => { }; // (4, 2, 2)
-onPlayerChat = function (playerId, chatMessage, channelName) { }; // (6, 2, 2)
-onPlayerJoin = function (playerId) { }; // (8, 2, 2)
+// ...
+tick = () => { }; // (27, 4, 14)
+onPlayerClick = (playerId, wasAltClick, x, y, z, blockName)) => { }; // (27, 4, 12)
+playerCommand = function (playerId) => { }; // (27, 4, 10)
+onPlayerChat = function (playerId, chatMessage, channelName) { }; // (27, 4, 10)
 // ...
 ```
 
@@ -669,10 +670,11 @@ CL.SM.dispose([registryX, registryY, registryZ]);
 
 // 3) Build storage from your block positions list
 CL.SM.build([registryX, registryY, registryZ], [
-  [2, 2, 2],
-  [4, 2, 2],
-  [6, 2, 2],
-  [8, 2, 2],
+  // ...
+  [27, 4, 14],
+  [27, 4, 12],
+  [27, 4, 10],
+  // ...
 ]);
 ```
 
@@ -895,7 +897,7 @@ if (myId === null) {
   </p>
 
   <div align="left">
-    <h4>✦ <em>Extend Config Method</em> ✦</h4>
+    <h4>✦ <em>Extended Config Method</em> ✦</h4>
   </div>
 
   <p>
@@ -907,17 +909,23 @@ if (myId === null) {
 ```js
 if (myId === null) {
   CL.config.BLOCKS = [
-    [2, 2, 2],
-    [4, 2, 2],
-    [6, 2, 2],
-    [8, 2, 2],
+    // ...
+    [27, 4, 14],
+    [27, 4, 12],
+    [27, 4, 10],
+    // ...
   ];
 
+  const boot_manager = CL.config.boot_manager;
+  boot_manager.boot_delay_ms = 0;
+  boot_manager.show_boot_logs = true;
+  boot_manager.show_error_logs = true;
+
   tick = () => {
-    if (!CL.isRunning) {
+    if(!CL.isRunning) {
       CL.reboot();
     }
-  };
+  }
 }
 ```
 
@@ -1010,11 +1018,39 @@ eventName = (...args) => {
     </div>
   </summary>
 
-  <blockquote>
-    <p>
-      <h3><code><b>in progress...</b></code></h3>
-    </p>
-  </blockquote>
+  <div align="left">
+    <h3>〔 <code><b>Files</b></code> 〕</h3>
+  </div>
+
+  <ul>
+    <li>
+      <a href="https://github.com/delfineonx/code-loader/blob/main/assets/delfineonx_example.bloxdschem">
+        <code><b>example .bloxdschem</b></code>
+      </a>
+    </li>
+    <li>
+      <a href="https://github.com/delfineonx/code-loader/blob/main/assets/delfineonx_config.js">
+        <code><b>config .js</b></code>
+      </a>
+    </li>
+  </ul>
+
+  <div align="left">
+    <h3>〔 <code><b>Setup</b></code> 〕</h3>
+  </div>
+
+  <ol>
+    <li>
+      Download and load schematic <code>delfineonx_example.bloxdschem</code>.
+    </li>
+    <li>
+      Paste it using <code>World Builder</code> at position <code>(0, 0, 0)</code>.
+    </li>
+    <li>
+      Open <code>delfineonx_config.js</code>, copy the <code>configuration</code> object,
+      and replace your current config in real <code>World Code</code>.
+    </li>
+  </ol>
 
 </details>
 
