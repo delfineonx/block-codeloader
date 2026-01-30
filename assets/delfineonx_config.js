@@ -16,9 +16,9 @@ ACTIVE_EVENTS:[
 ],
 BLOCKS:[
 
-// [6, 25, 6]
+// [6, 25, 6],
 
-// [27, 4, 25]
+// [27, 4, 25],
 
 [27, 4, 23],
 [27, 4, 21],
@@ -58,7 +58,7 @@ onPlayerLeave: [/* null, true */], //
 onPlayerJump: [/* undefined, true, 5 */], //
 onRespawnRequest: [[0,-10000,0]],
 playerCommand: [undefined],
-onPlayerChat: [null /* , true */], //
+onPlayerChat: [null /*, true */], //
 onPlayerChangeBlock: ["preventChange"],
 onPlayerDropItem: ["preventDrop"],
 onPlayerPickedUpItem: [],
