@@ -18,7 +18,7 @@ show_execution_logs: false,
 },
 block_manager:{
 is_chest_mode: false,
-max_executions_per_tick: 16,
+max_executions_per_tick: 8,
 max_errors_count: 32,
 },
 join_manager:{
@@ -114,4 +114,4 @@ globalThis.CL=D;
 void 0
 }
 
-// 26/01/2026
+// 01/02/2026

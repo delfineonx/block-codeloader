@@ -114,8 +114,8 @@ const configuration = {
   </div>
 
   <p>
-    Prefer assigning functions to globals (properties on <code>globalThis</code>).<br>
-    Avoid <ins>named function declarations</ins> for callbacks, because when the loader rewires handlers manually (not after world code init), such declarations can behave unexpectedly.
+    Prefer assigning callback functions to globals (properties on <code>globalThis</code>).<br>
+    Avoid <ins>named function declarations</ins> for events, because when the loader wires handlers, such declarations can behave unexpectedly.
   </p>
 
   <ul>
@@ -128,7 +128,7 @@ const configuration = {
 // ---------- EXAMPLE ----------
 // ...
 tick = () => { }; // (27, 4, 14)
-onPlayerClick = (playerId, wasAltClick, x, y, z, blockName)) => { }; // (27, 4, 12)
+onPlayerClick = (playerId, wasAltClick, x, y, z, blockName) => { }; // (27, 4, 12)
 playerCommand = function (playerId) => { }; // (27, 4, 10)
 onPlayerChat = function (playerId, chatMessage, channelName) { }; // (27, 4, 10)
 // ...
@@ -140,12 +140,12 @@ onPlayerChat = function (playerId, chatMessage, channelName) { }; // (27, 4, 10)
 
   <p>
     If the boot process takes long enough (because you lowered
-    <code>CL.block_manager.max_executions_per_tick</code> to reduce interruptions, or you have many blocks to execute),
-    some callbacks (especially <code>tick</code> and <code>onBlockStand</code>) may fire while the loader is still booting.
+    <code>max_executions_per_tick</code> to reduce interruptions, or you have many blocks to execute),
+    some callbacks (especially <code>tick</code> and <code>onBlockStand</code>) may run while the loader is still booting.
     At that point, not everything may be defined yet, which can lead to errors.
   </p>
 
-  <p><code>Solution:</code> guard the event function so it does nothing while the loader is still booting.</p>
+  <p><ins><code>Solution:</code></ins> guard the event function so it does nothing while the loader is still booting.</p>
 
 ```js
 // ---------- RECOMMENDED PATTERN ----------
@@ -198,7 +198,7 @@ SM
 
 /*
  * Accessor of `configuration` object (sealed).
- * You may mutate existing vaues by keys (then call `CL.reboot()`),
+ * You may mutate existing vaues by keys and then call `CL.reboot()`,
  * but you cannot add or delete properties.
  */
 config
@@ -309,7 +309,7 @@ check(registryPosition)
 build(registryPosition, blocks, maxStorageUnitsPerTick)
 
 /**
- * Remove all storage units and registry entries, but keep registry unit with slot 0.
+ * Remove all storage units and registry entries, but keep registry unit in slot 0.
  * Task is queued to tick.
  *
  * @param {[number, number, number]} registryPosition
@@ -337,7 +337,7 @@ dispose(registryPosition, maxStorageUnitsPerTick)
       <ul>
         <li>Most config objects are <ins>sealed</ins> on world code init.</li>
         <li><code>EVENT_REGISTRY</code> and <code>STYLES</code> are <ins>frozen</ins>.</li>
-        <li>You can change existing values by key and then call <code>CL.reboot()</code>.</li>
+        <li>You can change existing values by keys and then call <code>CL.reboot()</code>.</li>
         <li>You cannot add or remove properties (prevents accidental shape changes).</li>
       </ul>
     </p>
@@ -411,14 +411,14 @@ const configuration = {
     <li>
       <code><b>block data</b></code>
       <ul>
-        <li><code>block_manager.is_chest_mode = false</code></li>
+        <li><code>is_chest_mode = false</code></li>
         <li>execution order = order of entries in <code>BLOCKS</code></li>
       </ul>
     </li>
     <li>
       <code><b>chest data</b></code>
       <ul>
-        <li><code>block_manager.is_chest_mode = true</code></li>
+        <li><code>is_chest_mode = true</code></li>
         <li><code>BLOCKS</code> should contain only one entry: <code>[registryX, registryY, registryZ]</code></li>
         <li>execution order = storage order inside the registry (see <a href="#storage-format">Storage Format</a>)</li>
       </ul>
@@ -513,13 +513,13 @@ const configuration = {
         <td><code>is_chest_mode</code></td>
         <td align="right">Boolean</td>
         <td align="right"><code>false</code></td>
-        <td>Whether to read and execute from chest storage (registry) instead of block data.</td>
+        <td>Whether to read and execute from chest storage instead of block data.</td>
       </tr>
       <tr>
         <td><code>max_executions_per_tick</code></td>
         <td align="right">Number</td>
-        <td align="right"><code>16</code></td>
-        <td>Max blocks (or storage partitions) executions per tick during boot. Min 1. Integer-floored.</td>
+        <td align="right"><code>8</code></td>
+        <td>Max blocks (or storage partitions) executed per tick during boot. Min 1. Integer-floored.</td>
       </tr>
       <tr>
         <td><code>max_errors_count</code></td>
@@ -548,13 +548,13 @@ const configuration = {
         <td><code>is_framework_enabled</code></td>
         <td align="right">Boolean</td>
         <td align="right"><code>false</code></td>
-        <td>Master switch for using <code>Interruption Framework</code> for events setup (set only in real <code>World Code</code>).</td>
+        <td>Master switch for using <code>Interruption Framework</code> for events setup.</td>
       </tr>
       <tr>
         <td><code>default_retry_limit</code></td>
         <td align="right">Number</td>
         <td align="right"><code>2</code></td>
-        <td>Default retry budget when a registry entry omits <code>retryLimit</code>. Min 1. Integer-floored.</td>
+        <td>Default retry budget when event registry entry omits <code>retryLimit</code>. Min 1. Integer-floored.</td>
       </tr>
     </tbody>
   </table>
@@ -569,9 +569,7 @@ const configuration = {
       <ul>
         <li>Map (object): <code>eventName -&gt; null</code> or <code>[fallbackValue?, interruptionStatus?, retryLimit?].</code></li>
         <li>
-          <code>fallbackValue</code> is applied via
-          <code>api.setCallbackValueFallback(eventName, value)</code>
-          and can be <ins>any</ins> type/value.
+          <code>fallbackValue</code> is applied via <code>api.setCallbackValueFallback(eventName, value)</code> and can be <ins>any</ins> type/value.
         </li>
         <li><code>interruptionStatus</code> is converted to boolean.</li>
         <li><code>retryLimit</code> is integer-floored and used only when framework is enabled.</li>
@@ -595,7 +593,7 @@ const configuration = {
       <ul>
         <li><code>fallbackValue</code> — any value (default: <code>undefined</code>)</li>
         <li><code>interruptionStatus</code> — boolean (default: <code>false</code>)</li>
-        <li><code>retryLimit</code> — integer (default: <code>event_manager.default_retry_limit</code>)</li>
+        <li><code>retryLimit</code> — integer (default: <code>default_retry_limit</code>)</li>
       </ul>
     </li>
   </ul>
@@ -631,7 +629,7 @@ STYLES: [
   "#FF775E", "500", "0.95rem", // error (type 0)
   "#FFC23D", "500", "0.95rem", // warning (type 1)
   "#20DD69", "500", "0.95rem", // success (type 2)
-  "#52B2FF", "500", "0.95rem", // info (type 3)
+  "#52B2FF", "500", "0.95rem" // info (type 3)
 ]
 ```
 
@@ -653,7 +651,7 @@ STYLES: [
 
   <ul>
     <li>Moves your code from block data into chest item attributes (impossible to steal).</li>
-    <li>Provides a deterministic "storage registry" so the loader can find and execute code later.</li>
+    <li>Provides a deterministic storage so the loader can find and execute code later.</li>
     <li>Can spread work across ticks to avoid interruption issues.</li>
   </ul>
 
@@ -662,7 +660,7 @@ STYLES: [
   </div>
 
 ```js
-// 1) Create a registry (defines region where storage units can be placed)
+// 1) Create a registry unit (defines region where storage units can be placed)
 CL.SM.create([lowX, lowY, lowZ], [highX, highY, highZ]);
 
 // 2) Remove previously built storage units (optional, recommended to prevent mixed data)
@@ -681,7 +679,7 @@ CL.SM.build([registryX, registryY, registryZ], [
 ```js
 // 4) Switch loader to chest mode
 
-// Either in real `World Code` (recommended)
+// either in real World Code (recommended)
 const configuration = {
   // ...
   BLOCKS: [
@@ -695,7 +693,7 @@ const configuration = {
   // ...
 };
 
-// Or at runtime
+// or at runtime
 CL.config.block_manager.is_chest_mode = true;
 CL.config.BLOCKS = [[registryX, registryY, registryZ]];
 CL.reboot();
@@ -729,7 +727,7 @@ CL.reboot();
     <p>
       <h4><code><b>! SAFETY NOTE</b></code></h4>
       <ul>
-        <li><code>build()</code> places solid blocks (default: <code>"Bedrock"</code>) for each storage unit.</li>
+        <li><code>build(...)</code> places solid blocks (default: <code>"Bedrock"</code>) for each storage unit.</li>
         <li>Plan the region far away from gameplay, or in a sealed protected area.</li>
       </ul>
     </p>
@@ -802,7 +800,7 @@ CL.reboot();
 
   <p>
     Each slot stores a <ins>raw string</ins> chunk in <code>item.attributes.customAttributes._</code>.<br>
-    To execute a partition, the loader concatenates up to 9 chunks and calls <code>(0, eval)(code)</code>.
+    To execute a partition, the loader concatenates up to 9 chunks and calls indirect <code>eval</code>.
   </p>
 
 </details>
@@ -826,14 +824,11 @@ CL.reboot();
   </div>
 
   <p>
-    Moving your logic into block data (code blocks) prevents casual copying of your world code
-    (normally accessible via <kbd>F8</kbd> or directly from the code editor, including in custom games).
-    However, block data can still be easily read by attackers (exploiters) where the chunk is loaded.
+    Moving your logic into block data (code blocks) prevents casual copying of your world code (normally accessible via <kbd>F8</kbd> or directly from the code editor, including in custom games). However, block data can still be easily read by attackers (exploiters) where the chunk is loaded.
   </p>
 
   <p>
-    For maximum protection, move your code from blocks into chest storage using the
-    <code>Storage Manager</code>. Chest data is effectively impossible to steal in practice.
+    For maximum protection, move your code from blocks into chest storage using the <code>Storage Manager</code>. Chest data is effectively impossible to steal in practice.
   </p>
 
   <div align="left">
@@ -867,8 +862,7 @@ if (myId === null) {
 
   <ul>
     <li>Execution order follows <code>BLOCKS</code> (or storage order in chest mode).</li>
-    <li>The practical limit becomes Bloxd memory, not the editor.</li>
-    <li>In practice, <code>BLOCKS</code> array in configuration can have roughly <code>~8000</code> code block positions.</li>
+    <li>In practice, <code>BLOCKS</code> array in configuration can have roughly up to <code>~8000</code> code block positions.</li>
   </ul>
 
   <div align="left">
@@ -877,13 +871,13 @@ if (myId === null) {
 
   <p>
     <code>16000</code> chars — real <code>World Code</code> capacity.<br>
-    <code>13440</code> chars — default loader minified source.<br>
-    <code>15660</code> chars — configuration fully populated
+    <code>13440</code> chars — default loader minified source code.<br>
+    <code>15660</code> chars — with configuration fully populated
     (<code>ACTIVE_EVENTS</code> maxed out, all entries in <code>EVENT_REGISTRY</code> fully defined).
   </p>
 
   <p>
-    With typical block coordinate sizes:
+    With typical block coordinate entries:
   </p>
 
   <ul>
@@ -892,8 +886,7 @@ if (myId === null) {
   </ul>
 
   <p>
-    This leaves ~<code>340</code> free characters, enough for approximately
-    <code>12–28+</code> block positions directly inside real <code>World Code</code>.
+    This leaves ~<code>340</code> free characters, enough for approximately <code>12–28+</code> block positions directly inside real <code>World Code</code>.
   </p>
 
   <div align="left">
@@ -901,9 +894,7 @@ if (myId === null) {
   </div>
 
   <p>
-    You can dynamically replace <code>CL.config.BLOCKS</code> at runtime and then call
-    <code>CL.reboot()</code>. This allows staged loading of large codebases while keeping
-    only a single block position in real <code>World Code</code>.
+    You can dynamically replace/change <code>CL.config.BLOCKS</code> at runtime and then call <code>CL.reboot()</code>. This allows staged loading of large codebases while keeping only a single block position in real <code>World Code</code>.
   </p>
 
 ```js
@@ -938,8 +929,7 @@ if (myId === null) {
   </div>
 
   <p>
-    During development or testing, you may want to refresh only part of your logic
-    instead of rebooting everything. The loader supports both partial and complete re-initialization.
+    During development or testing, you may want to refresh only part of your logic instead of rebooting everything. The loader supports both partial and complete re-initialization.
   </p>
 
   <ul>
@@ -948,7 +938,7 @@ if (myId === null) {
   </ul>
 
   <p>
-    If executed code defines callback handlers, they are replaced immediately, making hot-swapping logic possible.
+    If executed code defines callback functions, handlers are replaced immediately, making hot-swapping logic possible.
   </p>
 
   <div align="left">
@@ -960,13 +950,11 @@ if (myId === null) {
   </div>
 
   <p>
-    Bloxd execution can be interrupted mid-flow.
-    The built-in <a href="https://github.com/delfineonx/interruption-framework"><code>Interruption Framework</code></a>
-    allows interrupted calls to be queued and retried safely and efficiently for selected selected events.
+    Bloxd execution can be interrupted mid-flow. The built-in <a href="https://github.com/delfineonx/interruption-framework"><code>Interruption Framework</code></a> allows interrupted calls to be queued and retried safely and efficiently for selected events.
   </p>
 
   <ul>
-    <li>Enable via <code>event_manager.is_framework_enabled = true</code> (in real <code>World Code</code> only).</li>
+    <li>Enable via <code>event_manager.is_framework_enabled = true</code>.</li>
     <li>Mark events with <code>interruptionStatus = true</code> in <code>EVENT_REGISTRY</code>.</li>
     <li>Retry budget is <code>retryLimit</code> (or <code>default_retry_limit</code>).</li>
   </ul>
@@ -987,9 +975,7 @@ tick = () => {
 ```
 
   <p>
-    The loader provides automatic interruption tracking and cleanup even after handlers return for selected events.
-    Outer-level framework setup is used internally for safety and convenience.
-    You may still use custom interruption handling with the help of framework inside your callback handler function.
+    The loader provides automatic interruption tracking and state cleanup even after handlers return for selected events. Outer-level framework setup is used internally for better safety and convenience. You may still use custom interruption handling with the help of framework inside your callback handler function.
   </p>
 
 ```js
@@ -1002,7 +988,7 @@ eventName = (...args) => {
   <blockquote>
     <p>
       <h4><code><b>! TIP</b></code></h4>
-      Resetting with <code>IF.state = 0</code> inside can be useful when splitting handler logic into independent parts that should not share the same retry setup.
+      Resetting with <code>IF.state = 0</code> inside can be useful when splitting callback handler logic into independent parts that should not share the same framework setup.
     </p>
   </blockquote>
 
@@ -1032,12 +1018,6 @@ eventName = (...args) => {
       <a href="https://github.com/delfineonx/code-loader/blob/main/assets/delfineonx_config.js">
         <code><b>config .js</b></code>
       </a>
-    </li>
-    <li>
-      <a href="https://youtu.be/LCQQ6GEvne4">
-        <code><b>demo video (YouTube)</b></code>
-      </a>
-    </li>
   </ul>
 
   <div align="left">
@@ -1052,10 +1032,21 @@ eventName = (...args) => {
       Paste it using <code>World Builder</code> at position <code>(0, 0, 0)</code>.
     </li>
     <li>
-      Open <code>delfineonx_config.js</code>, copy the <code>configuration</code> object,
-      and replace your current config in real <code>World Code</code>.
+      Open <code>delfineonx_config.js</code>, copy the <code>configuration</code> object, and replace your current config in real <code>World Code</code>.
     </li>
   </ol>
+
+  <div align="left">
+    <h3>〔 <code><b>Showcase</b></code> 〕</h3>
+  </div>
+
+  <ul>
+    <li>
+      <a href="https://youtu.be/LCQQ6GEvne4">
+        <code><b>video on YouTube</b></code>
+      </a>
+    </li>
+  </ul>
 
 </details>
 
@@ -1072,7 +1063,7 @@ eventName = (...args) => {
   <ul>
     <li>
       <code>"Unknown active events: ..."</code><br>
-      The event exists in <code>ACTIVE_EVENTS</code> but is missing from <code>EVENT_REGISTRY</code>.
+      The event exists in <code>ACTIVE_EVENTS</code> but is missing in <code>EVENT_REGISTRY</code>.
       Fix the name or add an entry to the registry.
     </li>
     <li>
@@ -1082,34 +1073,27 @@ eventName = (...args) => {
     </li>
     <li>
       <code>"Error on primary setup - ..."</code><br>
-      A critical loader error happened right after world code init.
+      A critical error happened right after world code init.
       Reinstall the loader and make sure your configuration is correct.
     </li>
     <li>
       <b>No code executes from blocks</b><br>
       <ol>
         <li>Ensure positions in <code>BLOCKS</code> are correct (use <code>CL.executionLogs()</code>).</li>
-        <li>Avoid named function declarations for events; assign handler functions to globals.</li>
+        <li>Avoid named function declarations for events; assign callback functions to globals.</li>
       </ol>
     </li>
     <li>
       <b>Chest mode says "No storage data found"</b><br>
       <ol>
         <li>Check that <code>BLOCKS = [[registryX, registryY, registryZ]]</code>.</li>
-        <li>Ensure the registry unit slot 0 has <code>customAttributes.region</code> (run <code>CL.SM.check()</code>).</li>
-      </ol>
-    </li>
-    <li>
-      <b>Storage tasks never finish</b><br>
-      <ol>
-        <li>Make sure the region is loaded (teleport near it while building/disposing).</li>
-        <li>Lower per-tick budgets if you get many interruptions due to world execution runtime limit; raise them if you want faster progress.</li>
+        <li>Ensure the registry unit slot 0 has <code>customAttributes.region</code> (run <code>CL.SM.check(regPos)</code>).</li>
       </ol>
     </li>
     <li>
       <b>Interrupted events are never retried</b><br>
       <ol>
-        <li><code>event_manager.is_framework_enabled</code> must be <code>true</code> in real World Code.</li>
+        <li><code>event_manager.is_framework_enabled</code> must be <code>true</code>.</li>
         <li>Set <code>EVENT_REGISTRY[eventName][1] = true</code> for that event.</li>
         <li>Ensure the event is included in <code>ACTIVE_EVENTS</code>.</li>
       </ol>
